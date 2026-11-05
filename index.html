@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SIREA – Encuesta de Evaluación Académica</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        html, body { width: 100%; margin: 0; padding: 0; min-height: 100vh; }
+        .likert-btn input[type="radio"]:checked + span {
+            background-color: #2563eb !important;
+            color: #ffffff !important;
+            border-color: #2563eb !important;
+            font-weight: bold;
+            box-shadow: 0 2px 4px rgba(37, 99, 235, 0.3);
+        }
+        .likert-btn input[type="radio"]:focus-visible + span { outline: 2px solid #60a5fa; outline-offset: 2px; }
+    </style>
+</head>
+<body class="bg-slate-100 text-slate-800 font-sans antialiased p-2 sm:p-4">
+    <!-- Garantiza que Tailwind genere desde el inicio las clases de error que se agregan con JS. -->
+    <div class="hidden border-2 border-rose-500 bg-rose-50" aria-hidden="true"></div>
+
+    <!-- PANTALLA DE AGRADECIMIENTO (centrada vertical y horizontalmente en la ventana) -->
+    <section id="gracias" class="hidden fixed inset-0 z-50 overflow-y-auto bg-slate-100" aria-live="polite">
+        <div class="flex min-h-full items-center justify-center p-4">
+            <div id="gracias-tarjeta" class="w-full max-w-xl break-words bg-white p-6 sm:p-8 rounded-2xl shadow-lg border border-slate-200 text-center space-y-5">
+                <div class="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto text-3xl shadow-inner">
+                    <i class="fa-solid fa-check"></i>
+                </div>
+                <div class="space-y-2">
+                    <h2 class="text-xl font-bold text-slate-900">¡Gracias por su retroalimentación!</h2>
+                    <p class="text-xs text-slate-600 leading-relaxed">Sus respuestas se han registrado de manera anónima y contribuirán directamente a la mejora continua de la experiencia académica en nuestra institución.</p>
+                </div>
+                <div class="pt-4 border-t border-slate-100 space-y-1">
+                    <p class="text-[11px] font-bold text-slate-700 uppercase tracking-wider">
+                        Instituto Politécnico Loyola (IPL) <br>
+                        <span class="text-slate-500 font-medium">e</span> <br>
+                        Instituto Especializado de Estudios Superiores Loyola (IEESL)
+                    </p>
+                    <p class="text-[10px] text-slate-400 pt-2">Puede cerrar esta ventana o pestaña de su navegador.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Alerta de preguntas faltantes (fija arriba para que se vea tras el scroll) -->
+    <div id="alerta" role="alert" aria-live="assertive"
+         class="hidden fixed top-2 inset-x-2 z-40 mx-auto max-w-xl bg-rose-100 border-l-4 border-rose-600 p-3 rounded-r-xl text-xs text-rose-900 font-semibold shadow-lg">
+        <div class="flex items-center gap-2">
+            <i class="fa-solid fa-circle-exclamation text-rose-600 text-lg"></i>
+            <span id="alerta-texto" class="flex-1"></span>
+            <button type="button" id="alerta-cerrar" class="text-rose-700 hover:text-rose-900 px-1" aria-label="Cerrar alerta"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+    </div>
+
+    <main id="contenido" class="w-full max-w-xl mx-auto space-y-4">
+
+        <div class="bg-slate-900 text-white p-4 rounded-xl shadow border-b-4 border-blue-600">
+            <div class="flex items-center gap-2 mb-1">
+                <i class="fa-solid fa-graduation-cap text-blue-400 text-xl"></i>
+                <h1 class="text-sm font-bold tracking-wide">SIREA – IPL / IEESL</h1>
+            </div>
+            <p class="text-[11px] text-slate-300">Retroalimentación de la Experiencia Académica</p>
+        </div>
+
+        <!-- Ficha del curso que se evalúa (misma información que la ficha del QR) -->
+        <div id="contexto" class="hidden bg-white border border-slate-200 rounded-xl p-4 text-center shadow-sm">
+            <p class="text-[10px] font-bold uppercase tracking-widest text-slate-400">Está evaluando</p>
+            <p id="ctx-curso" class="mt-1 break-words text-base font-bold text-slate-900"></p>
+            <p id="ctx-docente" class="mt-0.5 break-words text-xs text-slate-600"></p>
+            <p id="ctx-area" class="mt-0.5 break-words text-xs font-medium text-blue-700"></p>
+            <p id="ctx-unidad" class="mt-0.5 break-words text-xs text-slate-500"></p>
+        </div>
+
+        <div id="aviso-enlace" class="hidden bg-amber-50 border-l-4 border-amber-500 p-3 rounded-r-xl text-[11px] text-amber-900">
+            Este enlace no indica el curso ni el docente. Solicite al personal académico el enlace o código QR correcto.
+        </div>
+
+        <div class="bg-blue-50 border-l-4 border-blue-600 p-3 rounded-r-xl text-[11px] text-blue-950 space-y-1">
+            <p class="font-bold">Instrucciones:</p>
+            <p>Las preguntas marcadas con asterisco (<span class="text-rose-500 font-bold">*</span>) son obligatorias.</p>
+            <p class="font-medium text-blue-800 pt-0.5">Escala: 1 (Muy en desacuerdo) a 5 (Muy de acuerdo) | N/A</p>
+        </div>
+
+        <form id="form" novalidate class="bg-white p-3.5 sm:p-5 rounded-2xl shadow-sm border border-slate-200 space-y-5">
+
+            <!-- DATOS DEMOGRÁFICOS -->
+            <div class="p-3.5 bg-slate-50 border border-slate-200 rounded-xl space-y-3">
+                <h3 class="text-xs font-bold text-blue-950 uppercase tracking-wider border-b border-slate-200 pb-1.5 flex items-center gap-1.5">
+                    <i class="fa-solid fa-id-card text-blue-600"></i> Datos Demográficos
+                </h3>
+
+                <fieldset id="q-genero" data-campo="genero" data-base="border border-transparent"
+                          class="pregunta p-2 rounded-lg transition-colors border border-transparent">
+                    <legend class="block text-xs font-semibold text-slate-700 mb-1.5">Género <span class="text-rose-500 font-bold">*</span></legend>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-1.5">
+                        <label class="likert-btn cursor-pointer">
+                            <input type="radio" name="genero" value="Femenino" class="sr-only">
+                            <span class="flex items-center justify-center py-2 px-2 text-xs font-medium rounded-lg border border-slate-300 bg-white text-slate-700">Femenino</span>
+                        </label>
+                        <label class="likert-btn cursor-pointer">
+                            <input type="radio" name="genero" value="Masculino" class="sr-only">
+                            <span class="flex items-center justify-center py-2 px-2 text-xs font-medium rounded-lg border border-slate-300 bg-white text-slate-700">Masculino</span>
+                        </label>
+                        <label class="likert-btn cursor-pointer">
+                            <input type="radio" name="genero" value="Prefiero no decirlo" class="sr-only">
+                            <span class="flex items-center justify-center py-2 px-2 text-xs font-medium rounded-lg border border-slate-300 bg-white text-slate-700">Prefiero no decirlo</span>
+                        </label>
+                    </div>
+                    <p class="msg-error hidden mt-1.5 text-[11px] font-semibold text-rose-600">Seleccione una opción.</p>
+                </fieldset>
+
+                <div id="q-edad" data-campo="edad" data-base="border border-transparent"
+                     class="pregunta p-2 rounded-lg transition-colors border border-transparent">
+                    <label for="edad" class="block text-xs font-semibold text-slate-700 mb-1">Rango de edad <span class="text-rose-500 font-bold">*</span></label>
+                    <select id="edad" class="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                        <option value="" disabled selected>Seleccione su rango de edad...</option>
+                        <option value="menos de 15">menos de 15</option>
+                        <option value="15–17">15–17</option>
+                        <option value="18–24">18–24</option>
+                        <option value="25–34">25–34</option>
+                        <option value="35–44">35–44</option>
+                        <option value="45–54">45–54</option>
+                        <option value="55 o más">55 o más</option>
+                    </select>
+                    <p class="msg-error hidden mt-1.5 text-[11px] font-semibold text-rose-600">Seleccione su rango de edad.</p>
+                </div>
+            </div>
+
+            <!-- PREGUNTAS LIKERT (se generan con JS) -->
+            <div id="likert" class="space-y-4"></div>
+
+            <!-- PREGUNTAS ABIERTAS (se generan con JS) -->
+            <div class="border-t border-slate-200 pt-5 space-y-3.5">
+                <h3 class="text-xs font-bold text-slate-900 uppercase tracking-wider">VII. Preguntas Abiertas</h3>
+                <div id="abiertas" class="space-y-3.5"></div>
+            </div>
+
+            <button type="submit" id="btn-enviar" class="w-full bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white font-bold py-3.5 rounded-xl transition shadow text-xs sm:text-sm flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-wait">
+                <i class="fa-solid fa-paper-plane"></i> <span id="btn-enviar-texto">Enviar Retroalimentación Anonimizada</span>
+            </button>
+            <p id="error-envio" role="alert" class="hidden rounded-lg bg-rose-50 p-3 text-xs text-rose-700"></p>
+        </form>
+    </main>
+
+<script>
+(function () {
+  'use strict';
+
+  /* ------------------------------------------------------------------ *
+   * CONFIGURACIÓN: pegue aquí la URL /exec de su implementación de Apps Script.
+   * Si la encuesta se sirve desde el propio Apps Script (doGet), la URL y los
+   * parámetros llegan inyectados y esta constante no se usa.
+   * ------------------------------------------------------------------ */
+  var API_URL_DEFAULT = 'https://script.google.com/macros/s/AKfycbwq9M8QajLafPUY7DdI_Kj53-jRDCPsLEw-Qzqi1nGCiWGhM2sv2mmpaIlgqKVbFWQt/exec';
+  // Apps Script (doGet) reemplaza este texto por los datos del curso. Fuera de Apps Script queda null.
+  var CTX_INYECTADO = '__SIREA_CTX__';
+  if (typeof CTX_INYECTADO !== 'object') CTX_INYECTADO = null;
+
+  /* Preguntas originales de SIREA (P1–P27). */
+  var PREGUNTAS = [
+    { id: 1,  sec: 'I. Dominio y desempeño del docente', txt: '1. El docente demuestra dominio de los contenidos que imparte.' },
+    { id: 2,  sec: 'I. Dominio y desempeño del docente', txt: '2. Explica los conceptos de manera clara y comprensible.' },
+    { id: 3,  sec: 'I. Dominio y desempeño del docente', txt: '3. Relaciona los contenidos con ejemplos o situaciones prácticas.' },
+    { id: 4,  sec: 'I. Dominio y desempeño del docente', txt: '4. Responde adecuadamente las preguntas de los estudiantes.' },
+    { id: 5,  sec: 'II. Planificación y desarrollo de la clase', txt: '5. Al inicio de la clase se presentan los objetivos esperados.' },
+    { id: 6,  sec: 'II. Planificación y desarrollo de la clase', txt: '6. Los contenidos se desarrollan de forma organizada.' },
+    { id: 7,  sec: 'II. Planificación y desarrollo de la clase', txt: '7. El tiempo de la clase se utiliza adecuadamente.' },
+    { id: 8,  sec: 'II. Planificación y desarrollo de la clase', txt: '8. Las actividades contribuyen al logro de los objetivos.' },
+    { id: 9,  sec: 'III. Metodología y participación', txt: '9. Utiliza estrategias que facilitan la comprensión.' },
+    { id: 10, sec: 'III. Metodología y participación', txt: '10. Promueve la participación activa de los estudiantes.' },
+    { id: 11, sec: 'III. Metodología y participación', txt: '11. Utiliza recursos didácticos apropiados.' },
+    { id: 12, sec: 'III. Metodología y participación', txt: '12. Estimula el análisis y el pensamiento crítico.' },
+    { id: 13, sec: 'IV. Clima del aula e interacción', txt: '13. El docente trata a los estudiantes con respeto.' },
+    { id: 14, sec: 'IV. Clima del aula e interacción', txt: '14. Promueve un ambiente de confianza para opiniones.' },
+    { id: 15, sec: 'IV. Clima del aula e interacción', txt: '15. Escucha y considera las inquietudes planteadas.' },
+    { id: 16, sec: 'V. Aprendizaje y valoración general', txt: '16. La clase me permitió comprender mejor el tema.' },
+    { id: 17, sec: 'V. Aprendizaje y valoración general', txt: '17. Las actividades me ayudaron a aplicar lo aprendido.' },
+    { id: 18, sec: 'V. Aprendizaje y valoración general', txt: '18. En términos generales, la clase fue efectiva.' },
+    { id: 19, sec: 'VI. Servicios, espacios y recursos', txt: '19. Las aulas o espacios son adecuados.' },
+    { id: 20, sec: 'VI. Servicios, espacios y recursos', txt: '20. Los talleres/laboratorios cuentan con buenas condiciones.' },
+    { id: 21, sec: 'VI. Servicios, espacios y recursos', txt: '21. Los equipos requeridos estuvieron disponibles.' },
+    { id: 22, sec: 'VI. Servicios, espacios y recursos', txt: '22. Los equipos o máquinas funcionaron adecuadamente.' },
+    { id: 23, sec: 'VI. Servicios, espacios y recursos', txt: '23. Insumos y materiales suficientes para prácticas.' },
+    { id: 24, sec: 'VI. Servicios, espacios y recursos', txt: '24. Instrucciones de uso y seguridad adecuadas.' },
+    { id: 25, sec: 'VI. Servicios, espacios y recursos', txt: '25. Disponibilidad de equipos de protección personal.' },
+    { id: 26, sec: 'VI. Servicios, espacios y recursos', txt: '26. Plataformas digitales o tecnología facilitaron aprendizaje.' },
+    { id: 27, sec: 'VI. Servicios, espacios y recursos', txt: '27. Servicios de apoyo respondieron oportunamente.' }
+  ];
+
+  /* Preguntas abiertas originales (f1–f4 obligatorias, f5 opcional). */
+  var ABIERTAS = [
+    { id: 'f1', txt: '1. ¿Qué aspectos del desempeño del docente consideras más positivos?', req: true, ph: 'Escriba aquí...' },
+    { id: 'f2', txt: '2. ¿Qué podría mejorar el docente en su forma de impartir la clase?', req: true, ph: 'Escriba aquí...' },
+    { id: 'f3', txt: '3. ¿Qué aspectos de los espacios, equipos o materiales deberían mejorarse?', req: true, ph: 'Escriba «No aplica» si corresponde...' },
+    { id: 'f4', txt: '4. ¿Qué recomendaciones harías para mejorar la experiencia de aprendizaje?', req: true, ph: 'Escriba aquí...' },
+    { id: 'f5', txt: '5. ¿Qué otras formaciones o temas le interesaría recibir?', req: false, ph: 'Temas de interés...' }
+  ];
+
+  var OPCIONES = ['1', '2', '3', '4', '5', 'N/A'];
+  var CLASES_ERROR = ['border-2', 'border-rose-500', 'bg-rose-50'];
+
+  var $ = function (id) { return document.getElementById(id); };
+  var form = $('form');
+
+  function esc(s) {
+    return String(s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+
+  /* ---------- Contexto (Unidad, Área, Curso, Docente) ---------- */
+  function leerContexto() {
+    if (CTX_INYECTADO) return CTX_INYECTADO;
+    var p = new URLSearchParams(location.search);
+    // El curso viaja como "cu" (Apps Script reserva "c"); se acepta "c" en enlaces antiguos fuera de Apps Script.
+    var tiene = ['u', 'a', 'cu', 'c', 'd'].some(function (k) { return p.get(k); });
+    if (!tiene && document.referrer) {
+      try { p = new URL(document.referrer).searchParams; } catch (e) { /* sin referrer útil */ }
+    }
+    return { u: p.get('u') || '', a: p.get('a') || '', c: p.get('cu') || p.get('c') || '', d: p.get('d') || '', s: p.get('s') || '' };
+  }
+
+  var CTX = leerContexto();
+  var API_URL = CTX.apiUrl || API_URL_DEFAULT;
+
+  (function pintarContexto() {
+    $('ctx-curso').textContent = CTX.c || '';
+    $('ctx-docente').textContent = CTX.d ? 'Docente: ' + CTX.d : '';
+    $('ctx-area').textContent = CTX.a ? 'Área: ' + CTX.a : '';
+    $('ctx-unidad').textContent = CTX.u || '';
+    if (CTX.c || CTX.d || CTX.a || CTX.u) $('contexto').classList.remove('hidden');
+    if (!CTX.c && !CTX.d) $('aviso-enlace').classList.remove('hidden');
+  })();
+
+  /* ---------- Render de preguntas (ninguna opción preseleccionada) ---------- */
+  (function renderLikert() {
+    var html = '', seccion = '';
+    var BASE = 'border border-slate-200 bg-slate-50';
+    PREGUNTAS.forEach(function (q) {
+      if (q.sec !== seccion) {
+        seccion = q.sec;
+        html += '<h3 class="text-xs font-bold text-blue-900 border-b-2 border-blue-200 pb-1 pt-3 uppercase tracking-wider">' + esc(seccion) + '</h3>';
+      }
+      var id = 'P' + q.id;
+      html += '<fieldset id="q-' + id + '" data-campo="' + id + '" data-base="' + BASE + '" class="pregunta p-3 rounded-xl space-y-2 transition-colors ' + BASE + '">' +
+        '<legend class="sr-only">Pregunta ' + q.id + '</legend>' +
+        '<p class="text-xs font-medium text-slate-800 leading-snug">' + esc(q.txt) + ' <span class="text-rose-500 font-bold">*</span></p>' +
+        '<div class="grid grid-cols-6 gap-1 pt-1">';
+      OPCIONES.forEach(function (op) {
+        html += '<label class="likert-btn flex-1 cursor-pointer"><input type="radio" name="' + id + '" value="' + op + '" class="sr-only">' +
+          '<span class="flex items-center justify-center py-2 px-1 text-xs font-semibold rounded-lg border border-slate-300 bg-white text-slate-700 active:bg-blue-100 transition-all select-none">' +
+          op + '</span></label>';
+      });
+      html += '</div><p class="msg-error hidden text-[11px] font-semibold text-rose-600">Seleccione una opción.</p></fieldset>';
+    });
+    $('likert').innerHTML = html;
+  })();
+
+  (function renderAbiertas() {
+    $('abiertas').innerHTML = ABIERTAS.map(function (q) {
+      var base = q.req ? 'border border-transparent' : 'border-t border-dashed border-slate-200';
+      return '<div id="q-' + q.id + '" data-campo="' + q.id + '" data-base="' + base + '" class="' + (q.req ? 'pregunta ' : '') + 'p-2.5 rounded-xl transition-colors ' + base + '">' +
+        '<label for="' + q.id + '" class="block text-xs font-semibold ' + (q.req ? 'text-slate-700' : 'text-blue-900') + ' mb-1">' + esc(q.txt) +
+        (q.req ? ' <span class="text-rose-500 font-bold">*</span>' : ' <span class="text-slate-500 font-normal">(Opcional)</span>') + '</label>' +
+        '<textarea id="' + q.id + '" rows="2" maxlength="2000" placeholder="' + esc(q.ph) + '" ' +
+        'class="w-full p-2 bg-slate-50 border border-slate-300 rounded-lg text-xs focus:ring-2 focus:ring-blue-500 focus:bg-white focus:outline-none"></textarea>' +
+        (q.req ? '<p class="msg-error hidden mt-1 text-[11px] font-semibold text-rose-600">Esta pregunta es obligatoria.</p>' : '') +
+        '</div>';
+    }).join('');
+  })();
+
+  /* ---------- Validación ---------- */
+  function respondida(campo) {
+    if (campo === 'edad') return !!$('edad').value;
+    if (/^f\d$/.test(campo)) return $(campo).value.trim() !== '';
+    return !!form.querySelector('input[name="' + campo + '"]:checked');
+  }
+
+  function camposObligatorios() {
+    var lista = ['genero', 'edad'];
+    PREGUNTAS.forEach(function (q) { lista.push('P' + q.id); });
+    ABIERTAS.forEach(function (q) { if (q.req) lista.push(q.id); });
+    return lista;
+  }
+
+  function marcar(cont, error) {
+    var base = (cont.dataset.base || '').split(' ').filter(Boolean);
+    var quitar = error ? base : CLASES_ERROR;
+    var poner = error ? CLASES_ERROR : base;
+    quitar.forEach(function (c) { cont.classList.remove(c); });
+    poner.forEach(function (c) { cont.classList.add(c); });
+    cont.setAttribute('aria-invalid', error ? 'true' : 'false');
+    var msg = cont.querySelector('.msg-error');
+    if (msg) msg.classList.toggle('hidden', !error);
+  }
+
+  function validar() {
+    var faltantes = [];
+    camposObligatorios().forEach(function (campo) {
+      var cont = $('q-' + campo);
+      var ok = respondida(campo);
+      marcar(cont, !ok);
+      if (!ok) faltantes.push(cont);
+    });
+    return faltantes;
+  }
+
+  function mostrarAlerta(texto) {
+    $('alerta-texto').textContent = texto;
+    $('alerta').classList.remove('hidden');
+  }
+  function ocultarAlerta() { $('alerta').classList.add('hidden'); }
+  $('alerta-cerrar').addEventListener('click', ocultarAlerta);
+
+  // Quita el rojo en cuanto la pregunta se responde.
+  function alResponder(ev) {
+    var cont = ev.target.closest('.pregunta');
+    if (!cont || cont.getAttribute('aria-invalid') !== 'true') return;
+    if (respondida(cont.dataset.campo)) marcar(cont, false);
+    if (!form.querySelector('.pregunta[aria-invalid="true"]')) ocultarAlerta();
+  }
+  form.addEventListener('change', alResponder);
+  form.addEventListener('input', alResponder);
+
+  /* ---------- Envío ---------- */
+  function construirPayload() {
+    var likert = {};
+    PREGUNTAS.forEach(function (q) { likert['P' + q.id] = form.querySelector('input[name="P' + q.id + '"]:checked').value; });
+    var abiertas = {};
+    ABIERTAS.forEach(function (q) { abiertas[q.id] = $(q.id).value.trim(); });
+    return {
+      ctx: { u: CTX.u || '', a: CTX.a || '', c: CTX.c || '', d: CTX.d || '', s: CTX.s || '' },
+      genero: form.querySelector('input[name="genero"]:checked').value,
+      edad: $('edad').value,
+      likert: likert,
+      abiertas: abiertas
+    };
+  }
+
+  function enviar(payload) {
+    // 1) Servida por Apps Script: llamada directa al servidor, sin CORS y con confirmación real.
+    if (window.google && google.script && google.script.run) {
+      return new Promise(function (resolve, reject) {
+        google.script.run
+          .withSuccessHandler(function (r) { r && r.ok ? resolve(r) : reject(new Error((r && r.error) || 'Error desconocido')); })
+          .withFailureHandler(reject)
+          .registrarRespuesta(payload);
+      });
+    }
+    // 2) Incrustada en Google Sites u otro sitio: fetch "no-cors" con text/plain
+    //    (petición "simple": sin preflight; Apps Script la recibe en e.postData.contents).
+    if (/PEGAR_AQUI/.test(API_URL)) {
+      return Promise.reject(new Error('La encuesta no está configurada (falta la URL de Apps Script).'));
+    }
+    var ctrl = window.AbortController ? new AbortController() : null;
+    var t = setTimeout(function () { if (ctrl) ctrl.abort(); }, 25000);
+    return fetch(API_URL, {
+      method: 'POST',
+      mode: 'no-cors',
+      // Sin cookies: Apps Script trata el envío como anónimo, aunque el celular tenga varias
+      // cuentas de Google abiertas (con ellas Google respondería "el archivo no existe").
+      credentials: 'omit',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(payload),
+      signal: ctrl ? ctrl.signal : undefined
+    }).finally(function () { clearTimeout(t); });
+  }
+
+  function mostrarGracias() {
+    $('contenido').classList.add('hidden');
+    ocultarAlerta();
+    $('gracias').classList.remove('hidden');
+    window.scrollTo(0, 0);
+  }
+
+  var enviando = false;
+  form.addEventListener('submit', function (ev) {
+    ev.preventDefault();
+    if (enviando) return;
+    $('error-envio').classList.add('hidden');
+
+    var faltantes = validar();
+    if (faltantes.length) {
+      mostrarAlerta((faltantes.length === 1 ? 'Falta 1 pregunta obligatoria. ' : 'Faltan ' + faltantes.length + ' preguntas obligatorias. ') +
+                    'Por favor responda las preguntas marcadas en rojo para continuar.');
+      var primero = faltantes[0];
+      primero.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      var foco = primero.querySelector('input, select, textarea');
+      if (foco) { try { foco.focus({ preventScroll: true }); } catch (e) { /* navegadores antiguos */ } }
+      return;
+    }
+
+    enviando = true;
+    var btn = $('btn-enviar');
+    btn.disabled = true;
+    $('btn-enviar-texto').textContent = 'Guardando respuestas...';
+    enviar(construirPayload())
+      .then(mostrarGracias)
+      .catch(function (err) {
+        var e = $('error-envio');
+        e.textContent = 'No se pudo enviar la evaluación (' + (err && err.message ? err.message : err) +
+                        '). Verifique su conexión e inténtelo de nuevo.';
+        e.classList.remove('hidden');
+        btn.disabled = false;
+        $('btn-enviar-texto').textContent = 'Enviar Retroalimentación Anonimizada';
+        enviando = false;
+      });
+  });
+})();
+</script>
+</body>
+</html>
