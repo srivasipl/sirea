@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SIREA – Resultados</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="bg-slate-100 text-slate-800 font-sans antialiased p-2 sm:p-4">
+  <main class="w-full max-w-4xl mx-auto space-y-4">
+
+    <div class="bg-slate-900 text-white p-4 rounded-xl shadow border-b-4 border-blue-600 flex flex-wrap items-center justify-between gap-3">
+      <div>
+        <div class="flex items-center gap-2 mb-1">
+          <i class="fa-solid fa-chart-column text-blue-400 text-xl"></i>
+          <h1 class="text-sm font-bold tracking-wide">SIREA – Resultados</h1>
+        </div>
+        <p id="subtitulo" class="text-[11px] text-slate-300">Retroalimentación de la Experiencia Académica</p>
+      </div>
+      <a id="btn-hoja" target="_blank" rel="noopener" href="https://docs.google.com/spreadsheets/d/1Lnu_O0FAxVAN5WxuE7067nE-5GBWJ74gcM3tMrZx_fo/edit"
+         class="hidden rounded-lg bg-emerald-500 px-3 py-2 text-xs font-semibold text-white hover:bg-emerald-600">
+        <i class="fa-solid fa-table"></i> Hoja de respuestas
+      </a>
+    </div>
+
+    <!-- Acceso con clave -->
+    <form id="acceso" class="hidden bg-white p-5 rounded-2xl shadow-sm border border-slate-200 space-y-3 max-w-md mx-auto">
+      <h2 class="font-bold text-slate-900"><i class="fa-solid fa-lock text-blue-600"></i> Acceso a resultados</h2>
+      <p class="text-xs text-slate-600">Pegue su enlace privado de resultados o la clave de administración.</p>
+      <input id="clave" type="password" autocomplete="off" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" aria-label="Clave o enlace privado">
+      <button type="submit" class="w-full rounded-lg bg-blue-700 py-2.5 text-sm font-semibold text-white hover:bg-blue-800">Ver resultados</button>
+    </form>
+
+    <p id="mensaje" role="alert" class="hidden rounded-xl p-4 text-sm"></p>
+    <p id="cargando" class="hidden text-center text-sm text-slate-500"><i class="fa-solid fa-spinner fa-spin"></i> Cargando resultados…</p>
+
+    <section id="vista" class="hidden space-y-4">
+      <!-- Solo administración: filtros + CSV -->
+      <div id="filtro-wrap" class="hidden bg-white p-4 rounded-xl border border-slate-200 shadow-sm space-y-3">
+        <h2 class="text-xs font-bold text-blue-950 uppercase tracking-wider border-b border-slate-200 pb-1.5 flex items-center gap-1.5">
+          <i class="fa-solid fa-filter text-blue-600"></i> Filtros
+        </h2>
+        <div class="grid gap-3 sm:grid-cols-3">
+          <div>
+            <label for="f-unidad" class="block text-xs font-semibold text-slate-700 mb-1">Unidad</label>
+            <select id="f-unidad" class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs"></select>
+          </div>
+          <div>
+            <label for="f-area" class="block text-xs font-semibold text-slate-700 mb-1">Área</label>
+            <select id="f-area" class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs"></select>
+          </div>
+          <div>
+            <label for="filtro" class="block text-xs font-semibold text-slate-700 mb-1">Curso</label>
+            <select id="filtro" class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs"></select>
+          </div>
+        </div>
+        <div class="flex flex-wrap items-center gap-2">
+          <button id="btn-csv" type="button" class="rounded-lg bg-emerald-600 hover:bg-emerald-700 px-3 py-2 text-xs font-semibold text-white">
+            <i class="fa-solid fa-file-csv"></i> Descargar CSV (<span id="csv-n">0</span> respuestas)
+          </button>
+          <p id="csv-nota" class="text-[11px] text-slate-500">Descarga las respuestas del filtro actual. Se abre con Excel o Google Sheets.</p>
+        </div>
+      </div>
+
+      <!-- Solo administración: resumen por curso -->
+      <div id="cursos-wrap" class="hidden bg-white rounded-2xl border border-slate-200 p-4 shadow-sm">
+        <h2 class="text-sm font-bold text-slate-900 mb-1">Resumen por curso</h2>
+        <p class="text-[11px] text-slate-500 mb-3">Haga clic en un curso para ver su detalle.</p>
+        <div class="overflow-x-auto">
+          <table class="w-full text-xs">
+            <thead>
+              <tr class="text-left text-slate-500 border-b border-slate-200">
+                <th class="py-2 pr-2 font-semibold">Curso</th>
+                <th class="py-2 pr-2 font-semibold">Docente</th>
+                <th class="py-2 pr-2 font-semibold">Área</th>
+                <th class="py-2 pr-2 font-semibold">Unidad</th>
+                <th class="py-2 pr-2 font-semibold text-right">Respuestas</th>
+                <th class="py-2 font-semibold text-right">Promedio</th>
+              </tr>
+            </thead>
+            <tbody id="tabla-cursos"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div id="ficha" class="bg-white border border-slate-200 rounded-xl p-4 text-center shadow-sm">
+        <p class="text-[10px] font-bold uppercase tracking-widest text-slate-400">Resultados de</p>
+        <p id="r-curso" class="mt-1 break-words text-lg font-bold text-slate-900"></p>
+        <p id="r-docente" class="break-words text-xs text-slate-600"></p>
+        <p id="r-area" class="break-words text-xs font-medium text-blue-700"></p>
+        <p id="r-unidad" class="break-words text-xs text-slate-500"></p>
+      </div>
+
+      <p id="insuficiente" class="hidden rounded-xl bg-amber-50 border-l-4 border-amber-500 p-4 text-sm text-amber-900"></p>
+
+      <div id="detalle" class="space-y-4">
+        <div class="grid grid-cols-2 gap-3">
+          <div class="bg-white rounded-xl border border-slate-200 p-4 text-center shadow-sm">
+            <p class="text-[11px] font-semibold uppercase text-slate-500">Respuestas</p>
+            <p id="k-total" class="text-3xl font-bold text-slate-900"></p>
+          </div>
+          <div class="bg-white rounded-xl border border-slate-200 p-4 text-center shadow-sm">
+            <p class="text-[11px] font-semibold uppercase text-slate-500">Promedio general (1–5)</p>
+            <p id="k-promedio" class="text-3xl font-bold text-blue-700"></p>
+          </div>
+        </div>
+
+        <div class="bg-white rounded-2xl border border-slate-200 p-4 sm:p-5 shadow-sm">
+          <h2 class="text-sm font-bold text-slate-900 mb-3">Promedio por afirmación</h2>
+          <div id="preguntas" class="space-y-4"></div>
+        </div>
+
+        <div class="grid gap-4 sm:grid-cols-2">
+          <div class="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm">
+            <h2 class="text-sm font-bold text-slate-900 mb-3">Género</h2>
+            <div id="d-genero" class="space-y-2"></div>
+          </div>
+          <div class="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm">
+            <h2 class="text-sm font-bold text-slate-900 mb-3">Rango de edad</h2>
+            <div id="d-edad" class="space-y-2"></div>
+          </div>
+        </div>
+
+        <div class="bg-white rounded-2xl border border-slate-200 p-4 sm:p-5 shadow-sm">
+          <h2 class="text-sm font-bold text-slate-900 mb-1">Comentarios</h2>
+          <p class="text-[11px] text-slate-500 mb-3">Se muestran en orden aleatorio para proteger el anonimato.</p>
+          <div id="comentarios" class="space-y-4"></div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+<script>
+(function () {
+  'use strict';
+  // Apps Script (doGet) reemplaza este texto por la clave del enlace. Fuera de Apps Script queda null.
+  var CTX_INYECTADO = '__SIREA_CTX__';
+  if (typeof CTX_INYECTADO !== 'object') CTX_INYECTADO = null;
+
+  var PREGUNTAS = [
+    ['I. Dominio y desempeño del docente', 'El docente demuestra dominio de los contenidos que imparte.'],
+    ['I. Dominio y desempeño del docente', 'Explica los conceptos de manera clara y comprensible.'],
+    ['I. Dominio y desempeño del docente', 'Relaciona los contenidos con ejemplos o situaciones prácticas.'],
+    ['I. Dominio y desempeño del docente', 'Responde adecuadamente las preguntas de los estudiantes.'],
+    ['II. Planificación y desarrollo de la clase', 'Al inicio de la clase se presentan los objetivos esperados.'],
+    ['II. Planificación y desarrollo de la clase', 'Los contenidos se desarrollan de forma organizada.'],
+    ['II. Planificación y desarrollo de la clase', 'El tiempo de la clase se utiliza adecuadamente.'],
+    ['II. Planificación y desarrollo de la clase', 'Las actividades contribuyen al logro de los objetivos.'],
+    ['III. Metodología y participación', 'Utiliza estrategias que facilitan la comprensión.'],
+    ['III. Metodología y participación', 'Promueve la participación activa de los estudiantes.'],
+    ['III. Metodología y participación', 'Utiliza recursos didácticos apropiados.'],
+    ['III. Metodología y participación', 'Estimula el análisis y el pensamiento crítico.'],
+    ['IV. Clima del aula e interacción', 'El docente trata a los estudiantes con respeto.'],
+    ['IV. Clima del aula e interacción', 'Promueve un ambiente de confianza para opiniones.'],
+    ['IV. Clima del aula e interacción', 'Escucha y considera las inquietudes planteadas.'],
+    ['V. Aprendizaje y valoración general', 'La clase me permitió comprender mejor el tema.'],
+    ['V. Aprendizaje y valoración general', 'Las actividades me ayudaron a aplicar lo aprendido.'],
+    ['V. Aprendizaje y valoración general', 'En términos generales, la clase fue efectiva.'],
+    ['VI. Servicios, espacios y recursos', 'Las aulas o espacios son adecuados.'],
+    ['VI. Servicios, espacios y recursos', 'Los talleres/laboratorios cuentan con buenas condiciones.'],
+    ['VI. Servicios, espacios y recursos', 'Los equipos requeridos estuvieron disponibles.'],
+    ['VI. Servicios, espacios y recursos', 'Los equipos o máquinas funcionaron adecuadamente.'],
+    ['VI. Servicios, espacios y recursos', 'Insumos y materiales suficientes para prácticas.'],
+    ['VI. Servicios, espacios y recursos', 'Instrucciones de uso y seguridad adecuadas.'],
+    ['VI. Servicios, espacios y recursos', 'Disponibilidad de equipos de protección personal.'],
+    ['VI. Servicios, espacios y recursos', 'Plataformas digitales o tecnología facilitaron aprendizaje.'],
+    ['VI. Servicios, espacios y recursos', 'Servicios de apoyo respondieron oportunamente.']
+  ];
+  var ABIERTAS = [
+    '1. Aspectos más positivos del desempeño del docente',
+    '2. Qué podría mejorar el docente',
+    '3. Mejoras en espacios, equipos o materiales',
+    '4. Recomendaciones para la experiencia de aprendizaje',
+    '5. Otras formaciones o temas de interés'
+  ];
+
+  var $ = function (id) { return document.getElementById(id); };
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+
+  /* URL /exec de Apps Script, para cuando esta página se publica fuera de Apps Script (GitHub Pages). */
+  var API_URL_DEFAULT = 'https://script.google.com/macros/s/AKfycbwq9M8QajLafPUY7DdI_Kj53-jRDCPsLEw-Qzqi1nGCiWGhM2sv2mmpaIlgqKVbFWQt/exec';
+
+  /* Llamada al servidor:
+     1) google.script.run cuando la página la sirve Apps Script;
+     2) SIREA_PRUEBAS solo en la página de pruebas locales;
+     3) fetch POST a /exec cuando la página está en GitHub Pages. Va sin cookies (credentials: 'omit'),
+        así funciona aunque el navegador tenga varias cuentas de Google abiertas. */
+  function llamar(nombre, arg) {
+    if (window.google && google.script && google.script.run) {
+      return new Promise(function (res, rej) {
+        google.script.run.withSuccessHandler(res).withFailureHandler(rej)[nombre](arg);
+      });
+    }
+    try {
+      if (window.parent !== window && window.parent.SIREA_PRUEBAS) return window.parent.SIREA_PRUEBAS[nombre](arg);
+    } catch (e) { /* padre de otro origen */ }
+    if (nombre === 'obtenerResultados' && !/PEGAR_AQUI/.test(API_URL_DEFAULT)) {
+      return fetch(API_URL_DEFAULT, {
+        method: 'POST',
+        credentials: 'omit',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({ accion: 'resultados', clave: arg })
+      })
+        .then(function (r) { return r.json(); })
+        .then(function (j) { if (!j || j.ok === false) throw new Error((j && j.error) || 'Respuesta vacía'); return j; });
+    }
+    return Promise.reject(new Error('Abra esta página desde la URL de Apps Script (…/exec?p=resultados).'));
+  }
+
+  function mensaje(texto, tipo) {
+    var m = $('mensaje');
+    m.textContent = texto;
+    m.className = 'rounded-xl p-4 text-sm ' + (tipo === 'error' ? 'bg-rose-50 border-l-4 border-rose-500 text-rose-800' : 'bg-blue-50 border-l-4 border-blue-500 text-blue-900');
+    m.classList.toggle('hidden', !texto);
+  }
+
+  /* La clave puede venir en ?k=… (Apps Script) o en #k=… (GitHub Pages: lo que va después de # nunca
+     se envía al servidor que aloja la página). */
+  function claveDe(u) {
+    return u.searchParams.get('k') || new URLSearchParams(u.hash.replace(/^#/, '')).get('k') || '';
+  }
+
+  /* Acepta la clave sola o el enlace privado completo. */
+  function extraerClave(v) {
+    v = String(v || '').trim();
+    try { var k = claveDe(new URL(v)); if (k) return k; } catch (e) { /* no es URL */ }
+    return v;
+  }
+
+  function leerClaveInicial() {
+    if (CTX_INYECTADO && CTX_INYECTADO.k) return CTX_INYECTADO.k;
+    return claveDe(new URL(location.href));
+  }
+
+  /* ---------- Cálculos ---------- */
+  function promedio(vals) {
+    var n = vals.filter(function (v) { return typeof v === 'number'; });
+    return n.length ? n.reduce(function (a, b) { return a + b; }, 0) / n.length : null;
+  }
+  function fmt(x) { return x == null ? '—' : x.toFixed(2); }
+  function colorBarra(x) { return x == null ? 'bg-slate-300' : x >= 4 ? 'bg-emerald-500' : x >= 3 ? 'bg-amber-500' : 'bg-rose-500'; }
+  function contar(filas, campo) {
+    var c = {};
+    filas.forEach(function (f) { c[f[campo]] = (c[f[campo]] || 0) + 1; });
+    return c;
+  }
+  function mezclar(a) {
+    a = a.slice();
+    for (var i = a.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)); var t = a[i]; a[i] = a[j]; a[j] = t; }
+    return a;
+  }
+
+  /* ---------- Render ---------- */
+  function pintarFicha(curso, todos) {
+    $('r-curso').textContent = todos ? 'Todos los cursos' : (curso && curso.c) || 'Curso';
+    $('r-docente').textContent = !todos && curso && curso.d ? 'Docente: ' + curso.d : '';
+    $('r-area').textContent = !todos && curso && curso.a ? 'Área: ' + curso.a : '';
+    $('r-unidad').textContent = !todos && curso && curso.u ? curso.u : '';
+  }
+
+  function pintarBarras(id, conteos, total) {
+    var claves = Object.keys(conteos).sort();
+    $(id).innerHTML = claves.length ? claves.map(function (k) {
+      var pct = total ? Math.round(conteos[k] * 100 / total) : 0;
+      return '<div><div class="flex justify-between text-xs"><span>' + esc(k) + '</span><span class="font-semibold">' + conteos[k] + ' (' + pct + '%)</span></div>' +
+        '<div class="h-2 rounded bg-slate-100"><div class="h-2 rounded bg-blue-500" style="width:' + pct + '%"></div></div></div>';
+    }).join('') : '<p class="text-xs text-slate-400">Sin datos.</p>';
+  }
+
+  function pintarDetalle(filas, generos, edades) {
+    var todas = [];
+    filas.forEach(function (f) { todas = todas.concat(f.p); });
+    $('k-total').textContent = filas.length;
+    $('k-promedio').textContent = fmt(promedio(todas));
+
+    var html = '', sec = '';
+    PREGUNTAS.forEach(function (q, i) {
+      if (q[0] !== sec) {
+        if (sec) html += '</div>';
+        sec = q[0];
+        var idx = [];
+        PREGUNTAS.forEach(function (x, j) { if (x[0] === sec) idx.push(j); });
+        var vals = [];
+        filas.forEach(function (f) { idx.forEach(function (j) { vals.push(f.p[j]); }); });
+        html += '<div class="space-y-2"><div class="flex justify-between border-b-2 border-blue-200 pb-1"><h3 class="text-xs font-bold uppercase tracking-wider text-blue-900">' +
+          esc(sec) + '</h3><span class="text-xs font-bold text-blue-900">' + fmt(promedio(vals)) + '</span></div>';
+      }
+      var v = filas.map(function (f) { return f.p[i]; });
+      var p = promedio(v);
+      var na = v.filter(function (x) { return x === 'N/A'; }).length;
+      html += '<div class="text-xs" data-pregunta="P' + (i + 1) + '"><div class="flex justify-between gap-2"><span>' + (i + 1) + '. ' + esc(q[1]) + '</span>' +
+        '<span class="shrink-0 font-semibold">' + fmt(p) + (na ? ' <span class="font-normal text-slate-400">· N/A ' + na + '</span>' : '') + '</span></div>' +
+        '<div class="mt-1 h-2 rounded bg-slate-100"><div class="h-2 rounded ' + colorBarra(p) + '" style="width:' + (p ? p * 20 : 0) + '%"></div></div></div>';
+    });
+    if (sec) html += '</div>';
+    $('preguntas').innerHTML = html;
+
+    pintarBarras('d-genero', generos, filas.length);
+    pintarBarras('d-edad', edades, filas.length);
+
+    var orden = mezclar(filas);
+    $('comentarios').innerHTML = ABIERTAS.map(function (titulo, j) {
+      var textos = orden.map(function (f) { return f.f[j]; }).filter(function (t) { return t && t.trim(); });
+      return '<div><h3 class="text-xs font-bold text-slate-800 mb-1.5">' + esc(titulo) + ' <span class="font-normal text-slate-400">(' + textos.length + ')</span></h3>' +
+        (textos.length ? '<ul class="space-y-1.5">' + textos.map(function (t) {
+          return '<li class="rounded-lg bg-slate-50 border border-slate-200 p-2 text-xs whitespace-pre-line break-words">' + esc(t) + '</li>';
+        }).join('') + '</ul>' : '<p class="text-xs text-slate-400">Sin comentarios.</p>') + '</div>';
+    }).join('');
+  }
+
+  /* ---------- Vistas ---------- */
+  function vistaDocente(r) {
+    $('subtitulo').textContent = 'Resultados de su curso';
+    pintarFicha(r.curso, false);
+    if (!r.total) {
+      $('r-curso').textContent = 'Aún no hay respuestas';
+      $('insuficiente').textContent = 'Todavía no se ha registrado ninguna respuesta con este enlace. Si acaba de generarlo, compártale el QR a sus estudiantes.';
+      $('insuficiente').classList.remove('hidden');
+      $('detalle').classList.add('hidden');
+    } else if (r.total < r.minimo) {
+      $('insuficiente').textContent = 'Hay ' + r.total + ' respuesta(s). Para proteger el anonimato de los estudiantes, los resultados se muestran a partir de ' + r.minimo + ' respuestas.';
+      $('insuficiente').classList.remove('hidden');
+      $('detalle').classList.add('hidden');
+    } else {
+      pintarDetalle(r.filas, r.generos || {}, r.edades || {});
+    }
+    $('vista').classList.remove('hidden');
+  }
+
+  /* ---------- CSV (administración) ---------- */
+  var CABECERAS_CSV = ['Fecha', 'Unidad', 'Área', 'Curso', 'Docente', 'Género', 'Rango de Edad', 'Promedio General'];
+  for (var ci = 1; ci <= 27; ci++) CABECERAS_CSV.push('P' + ci);
+  for (var cj = 1; cj <= 5; cj++) CABECERAS_CSV.push('f' + cj);
+  CABECERAS_CSV.push('ID Encuesta');
+
+  /* Campo CSV entre comillas. Los textos que empiezan por = + - @ se prefijan con ' para que
+     Excel no los ejecute como fórmulas. */
+  function campoCsv(v) {
+    if (v == null) v = '';
+    if (typeof v === 'string' && /^[=+\-@]/.test(v)) v = "'" + v;
+    return '"' + String(v).replace(/"/g, '""') + '"';
+  }
+  function fechaLocal(iso) {
+    var d = new Date(iso);
+    if (isNaN(d)) return iso;
+    var p = function (n) { return (n < 10 ? '0' : '') + n; };
+    return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()) + ' ' + p(d.getHours()) + ':' + p(d.getMinutes());
+  }
+  function generarCsv(filas) {
+    var lineas = [CABECERAS_CSV.map(campoCsv).join(',')];
+    filas.forEach(function (f) {
+      lineas.push([fechaLocal(f.fecha), f.u, f.a, f.c, f.d, f.genero, f.edad, f.promedio]
+        .concat(f.p, f.f, [f.id]).map(campoCsv).join(','));
+    });
+    return '﻿' + lineas.join('\r\n'); // BOM: Excel reconoce tildes y ñ
+  }
+  function descargarCsv(texto) {
+    var hoy = new Date().toISOString().slice(0, 10);
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([texto], { type: 'text/csv;charset=utf-8' }));
+    a.download = 'SIREA_respuestas_' + hoy + '.csv';
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+    $('csv-nota').textContent = 'Si no se descargó, use la hoja de respuestas: Archivo ▸ Descargar ▸ Valores separados por comas (.csv).';
+  }
+  window.SIREA_campoCsv = campoCsv; // expuesto para pruebas
+
+  function vistaAdmin(r) {
+    $('subtitulo').textContent = 'Administración · todos los cursos';
+    $('btn-hoja').classList.remove('hidden');
+    var todas = r.filas;
+    var grupos = {};
+    function claveGrupo(f) { return f.id || ['sin-id', f.u, f.a, f.c, f.d].join('|'); }
+    todas.forEach(function (f) {
+      var k = claveGrupo(f);
+      (grupos[k] = grupos[k] || { curso: { u: f.u, a: f.a, c: f.c, d: f.d }, filas: [] }).filas.push(f);
+    });
+    var claves = Object.keys(grupos).sort(function (a, b) {
+      var x = grupos[a].curso, y = grupos[b].curso;
+      return (x.c + x.d).localeCompare(y.c + y.d, 'es');
+    });
+
+    function unicos(campo) {
+      var vistos = {};
+      todas.forEach(function (f) { if (f[campo]) vistos[f[campo]] = true; });
+      return Object.keys(vistos).sort(function (a, b) { return a.localeCompare(b, 'es'); });
+    }
+    function llenar(sel, valores, todos) {
+      var actual = sel.value;
+      sel.innerHTML = '<option value="">' + esc(todos) + '</option>' + valores.map(function (v) {
+        return '<option value="' + esc(v[0]) + '">' + esc(v[1]) + '</option>';
+      }).join('');
+      if (valores.some(function (v) { return v[0] === actual; })) sel.value = actual;
+    }
+    llenar($('f-unidad'), unicos('u').map(function (v) { return [v, v]; }), 'Todas las unidades');
+    llenar($('f-area'), unicos('a').map(function (v) { return [v, v]; }), 'Todas las áreas');
+
+    function clavesVisibles() {
+      var u = $('f-unidad').value, a = $('f-area').value;
+      return claves.filter(function (k) {
+        var c = grupos[k].curso;
+        return (!u || c.u === u) && (!a || c.a === a);
+      });
+    }
+    function llenarCursos() {
+      var visibles = clavesVisibles();
+      var total = visibles.reduce(function (s, k) { return s + grupos[k].filas.length; }, 0);
+      llenar($('filtro'), visibles.map(function (k) {
+        var c = grupos[k].curso;
+        return [k, (c.c || 'Sin curso') + ' — ' + (c.d || 'Sin docente') + ' (' + grupos[k].filas.length + ')'];
+      }), 'Todos los cursos (' + total + ')');
+    }
+    function filasActuales() {
+      var k = $('filtro').value;
+      if (k) return grupos[k].filas;
+      var out = [];
+      clavesVisibles().forEach(function (x) { out = out.concat(grupos[x].filas); });
+      return out;
+    }
+    function pintarTablaCursos() {
+      var k = $('filtro').value;
+      $('tabla-cursos').innerHTML = clavesVisibles().map(function (x) {
+        var g = grupos[x], c = g.curso, vals = [];
+        g.filas.forEach(function (f) { vals = vals.concat(f.p); });
+        var p = promedio(vals);
+        var color = p == null ? 'text-slate-400' : p >= 4 ? 'text-emerald-700' : p >= 3 ? 'text-amber-700' : 'text-rose-700';
+        return '<tr data-curso="' + esc(x) + '" class="cursor-pointer border-b border-slate-100 hover:bg-blue-50' + (x === k ? ' bg-blue-50' : '') + '">' +
+          '<td class="py-2 pr-2 font-semibold text-slate-900">' + esc(c.c || 'Sin curso') + '</td>' +
+          '<td class="py-2 pr-2">' + esc(c.d) + '</td>' +
+          '<td class="py-2 pr-2 text-blue-700">' + esc(c.a) + '</td>' +
+          '<td class="py-2 pr-2 text-slate-500">' + esc(c.u) + '</td>' +
+          '<td class="py-2 pr-2 text-right">' + g.filas.length + '</td>' +
+          '<td class="py-2 text-right font-bold ' + color + '">' + fmt(p) + '</td></tr>';
+      }).join('') || '<tr><td colspan="6" class="py-3 text-center text-slate-400">Sin cursos para este filtro.</td></tr>';
+    }
+    function mostrar() {
+      var k = $('filtro').value;
+      var filas = filasActuales();
+      var u = $('f-unidad').value, a = $('f-area').value;
+      if (k) {
+        pintarFicha(grupos[k].curso, false);
+      } else {
+        pintarFicha(null, true);
+        $('r-area').textContent = a ? 'Área: ' + a : '';
+        $('r-unidad').textContent = u || '';
+      }
+      $('csv-n').textContent = filas.length;
+      pintarTablaCursos();
+      pintarDetalle(filas, contar(filas, 'genero'), contar(filas, 'edad'));
+    }
+    window.SIREA_csvActual = function () { return generarCsv(filasActuales()); }; // expuesto para pruebas
+
+    $('f-unidad').onchange = function () { llenarCursos(); mostrar(); };
+    $('f-area').onchange = function () { llenarCursos(); mostrar(); };
+    $('filtro').onchange = mostrar;
+    $('tabla-cursos').onclick = function (ev) {
+      var tr = ev.target.closest('tr[data-curso]');
+      if (!tr) return;
+      $('filtro').value = tr.getAttribute('data-curso');
+      mostrar();
+      $('ficha').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    };
+    $('btn-csv').onclick = function () { descargarCsv(generarCsv(filasActuales())); };
+
+    llenarCursos();
+    $('filtro-wrap').classList.remove('hidden');
+    $('cursos-wrap').classList.remove('hidden');
+    mostrar();
+    $('vista').classList.remove('hidden');
+  }
+
+  function cargar(clave) {
+    mensaje('');
+    $('acceso').classList.add('hidden');
+    $('vista').classList.add('hidden');
+    $('insuficiente').classList.add('hidden');
+    $('detalle').classList.remove('hidden');
+    $('cargando').classList.remove('hidden');
+    return llamar('obtenerResultados', clave)
+      .then(function (r) {
+        $('cargando').classList.add('hidden');
+        if (r.rol === 'admin') vistaAdmin(r); else vistaDocente(r);
+      })
+      .catch(function (e) {
+        $('cargando').classList.add('hidden');
+        mensaje('No se pudieron cargar los resultados: ' + (e && e.message ? e.message : e), 'error');
+        $('acceso').classList.remove('hidden');
+      });
+  }
+  window.SIREA_cargar = cargar; // expuesto para pruebas
+
+  $('acceso').addEventListener('submit', function (ev) {
+    ev.preventDefault();
+    var clave = extraerClave($('clave').value);
+    if (clave) cargar(clave);
+  });
+
+  var inicial = leerClaveInicial();
+  if (inicial) cargar(inicial); else $('acceso').classList.remove('hidden');
+})();
+</script>
+</body>
+</html>

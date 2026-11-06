@@ -1,0 +1,585 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SIREA – Panel del Staff</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- FontAwesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- Generador de QR -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+</head>
+<body class="bg-slate-100 text-slate-800 font-sans antialiased p-2 sm:p-4">
+  <!-- Garantiza que Tailwind genere desde el inicio las clases de error que se agregan con JS. -->
+  <div class="hidden border-rose-500 bg-rose-50" aria-hidden="true"></div>
+
+  <main class="w-full max-w-4xl mx-auto space-y-4">
+
+    <!-- Cabecera (mismo estilo que la encuesta y los resultados) -->
+    <div class="bg-slate-900 text-white p-4 rounded-xl shadow border-b-4 border-blue-600 flex flex-wrap items-center justify-between gap-3">
+      <div>
+        <div class="flex items-center gap-2 mb-1">
+          <i class="fa-solid fa-qrcode text-blue-400 text-xl"></i>
+          <h1 class="text-sm font-bold tracking-wide">SIREA – Panel del Staff</h1>
+        </div>
+        <p class="text-[11px] text-slate-300">Genere el enlace y el código QR de la evaluación de cada curso</p>
+      </div>
+      <div class="flex flex-wrap items-center gap-2">
+        <a id="btn-panel-resultados" target="_blank" rel="noopener" href="#"
+           class="rounded-lg border border-slate-600 px-3 py-2 text-xs font-semibold text-slate-200 hover:bg-slate-800">
+          <i class="fa-solid fa-chart-column text-blue-400"></i> Resultados
+        </a>
+        <a id="btn-hoja" target="_blank" rel="noopener"
+           href="https://docs.google.com/spreadsheets/d/1Lnu_O0FAxVAN5WxuE7067nE-5GBWJ74gcM3tMrZx_fo/edit"
+           class="rounded-lg bg-emerald-500 px-3 py-2 text-xs font-semibold text-white hover:bg-emerald-600">
+          <i class="fa-solid fa-table"></i> Hoja de respuestas
+        </a>
+      </div>
+    </div>
+
+    <div class="bg-blue-50 border-l-4 border-blue-600 p-3 rounded-r-xl text-[11px] text-blue-950 space-y-1">
+      <p class="font-bold">Instrucciones:</p>
+      <p>1. Complete los datos del curso y pulse <b>Generar enlace y QR</b>.</p>
+      <p>2. Comparta el <b>QR o el enlace corto</b> con los estudiantes.</p>
+      <p>3. Entregue el <b>enlace privado de resultados</b> solo al docente del curso.</p>
+    </div>
+
+    <div class="grid items-start gap-4 md:grid-cols-2">
+
+      <!-- Formulario -->
+      <form id="form" novalidate class="bg-white p-3.5 sm:p-5 rounded-2xl shadow-sm border border-slate-200 space-y-4">
+        <div class="p-3.5 bg-slate-50 border border-slate-200 rounded-xl space-y-3">
+          <h3 class="text-xs font-bold text-blue-950 uppercase tracking-wider border-b border-slate-200 pb-1.5 flex items-center gap-1.5">
+            <i class="fa-solid fa-book-open text-blue-600"></i> Datos del curso
+          </h3>
+          <div>
+            <label for="u" class="block text-xs font-semibold text-slate-700 mb-1">Unidad <span class="text-rose-500 font-bold">*</span></label>
+            <select id="u" class="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs focus:ring-2 focus:ring-blue-500 focus:outline-none"></select>
+          </div>
+          <div>
+            <label for="a" class="block text-xs font-semibold text-slate-700 mb-1">Área <span class="text-rose-500 font-bold">*</span></label>
+            <select id="a" class="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs focus:ring-2 focus:ring-blue-500 focus:outline-none"></select>
+          </div>
+          <div>
+            <label for="c" class="block text-xs font-semibold text-slate-700 mb-1">Curso <span class="text-rose-500 font-bold">*</span></label>
+            <input id="c" maxlength="200" placeholder="Ej.: Gestión de la Calidad y Procesos" class="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs focus:ring-2 focus:ring-blue-500 focus:outline-none">
+          </div>
+          <div>
+            <label for="d" class="block text-xs font-semibold text-slate-700 mb-1">Docente <span class="text-rose-500 font-bold">*</span></label>
+            <input id="d" maxlength="200" placeholder="Ej.: Ing. Roberto Almonte" class="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs focus:ring-2 focus:ring-blue-500 focus:outline-none">
+          </div>
+        </div>
+
+        <details class="rounded-xl border border-slate-200 p-3 text-xs">
+          <summary class="cursor-pointer font-semibold text-slate-600"><i class="fa-solid fa-gear text-slate-400"></i> Configuración avanzada</summary>
+          <label for="base" class="block text-xs font-semibold text-slate-700 mb-1 mt-3">URL base de la encuesta</label>
+          <input id="base" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg font-mono text-[11px] focus:ring-2 focus:ring-blue-500 focus:bg-white focus:outline-none">
+          <p class="mt-1 text-[11px] text-slate-500">Normalmente es la URL <code>/exec</code> de la aplicación web de Apps Script.</p>
+          <label for="publica" class="block text-xs font-semibold text-slate-700 mb-1 mt-3">Página pública de la encuesta (GitHub Pages)</label>
+          <input id="publica" placeholder="https://usuario.github.io/sirea/" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg font-mono text-[11px] focus:ring-2 focus:ring-blue-500 focus:bg-white focus:outline-none">
+          <p class="mt-1 text-[11px] text-slate-500">Si está indicada, el QR abre esta página, que funciona aunque el celular tenga varias cuentas de Google abiertas.</p>
+        </details>
+
+        <p id="form-error" role="alert" class="hidden bg-rose-100 border-l-4 border-rose-600 p-3 rounded-r-xl text-xs text-rose-900 font-semibold"></p>
+
+        <button id="btn-generar" type="submit" class="w-full bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white font-bold py-3.5 rounded-xl transition shadow text-xs sm:text-sm flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-wait">
+          <i class="fa-solid fa-qrcode"></i> <span id="btn-generar-texto">Generar enlace y QR</span>
+        </button>
+      </form>
+
+      <!-- Resultado -->
+      <section id="resultado" class="hidden space-y-4" aria-live="polite">
+
+        <!-- Ficha del QR: identifica visualmente el curso (misma ficha que ve el estudiante) -->
+        <div id="ficha" class="bg-white p-4 sm:p-5 rounded-2xl shadow-sm border border-slate-200 text-center">
+          <p class="text-[10px] font-bold uppercase tracking-widest text-slate-400">Escanee para evaluar</p>
+          <div class="mx-auto mt-2 w-fit rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
+            <div id="qr" class="flex items-center justify-center"></div>
+          </div>
+          <h3 id="f-curso" class="mt-4 break-words text-base font-bold text-slate-900"></h3>
+          <p id="f-docente" class="mt-0.5 break-words text-xs text-slate-600"></p>
+          <p id="f-area" class="mt-0.5 break-words text-xs font-medium text-blue-700"></p>
+          <p id="f-unidad" class="mt-0.5 break-words text-xs text-slate-500"></p>
+
+          <input id="link" readonly aria-label="Enlace corto de la encuesta"
+                 class="mt-4 w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-center font-mono text-xs text-slate-800">
+          <button id="btn-copiar" type="button"
+                  class="mt-2 w-full bg-slate-900 hover:bg-slate-800 text-white font-semibold py-2.5 rounded-lg text-xs flex items-center justify-center gap-2 border-b-2 border-blue-600">
+            <i class="fa-solid fa-copy"></i> <span id="btn-copiar-texto">Copiar Enlace Corto</span>
+          </button>
+          <p id="copia-estado" class="mt-2 min-h-[1rem] text-xs"></p>
+
+          <div class="mt-1 grid grid-cols-1 gap-2 sm:grid-cols-2">
+            <a id="btn-descargar" href="#" download="QR_SIREA.png" class="rounded-lg border border-blue-600 bg-white px-3 py-2 text-xs font-semibold text-blue-700 hover:bg-blue-50">
+              <i class="fa-solid fa-download"></i> Descargar ficha QR
+            </a>
+            <a id="btn-abrir" href="#" target="_blank" rel="noopener" class="rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50">
+              <i class="fa-solid fa-arrow-up-right-from-square"></i> Probar encuesta
+            </a>
+          </div>
+          <details class="mt-3 text-left text-[11px] text-slate-500">
+            <summary class="cursor-pointer">Ver enlace completo</summary>
+            <p id="link-largo" class="mt-1 break-all font-mono"></p>
+          </details>
+        </div>
+
+        <!-- Enlace privado del docente: NO forma parte del QR ni de la ficha -->
+        <div id="privado" class="bg-amber-50 border-l-4 border-amber-500 p-4 rounded-r-xl shadow-sm">
+          <h3 class="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-amber-900">
+            <i class="fa-solid fa-lock"></i> Enlace privado de resultados
+          </h3>
+          <p class="mt-1 text-[11px] text-amber-900">
+            Solo para el docente del curso: muestra únicamente las respuestas de este curso.
+            <b>No lo comparta con estudiantes</b> y guárdelo: no se puede recuperar después.
+          </p>
+          <input id="link-resultados" readonly aria-label="Enlace privado de resultados"
+                 class="mt-2 w-full px-3 py-2 bg-white border border-amber-300 rounded-lg font-mono text-[11px] text-slate-800">
+          <button id="btn-copiar-resultados" type="button"
+                  class="mt-2 w-full bg-amber-600 hover:bg-amber-700 text-white font-semibold py-2.5 rounded-lg text-xs flex items-center justify-center gap-2">
+            <i class="fa-solid fa-copy"></i> Copiar enlace privado
+          </button>
+          <p id="copia-estado-resultados" class="mt-2 min-h-[1rem] text-xs"></p>
+        </div>
+      </section>
+    </div>
+  </main>
+
+<script>
+(function () {
+  'use strict';
+
+  /* ======================= CONFIGURACIÓN ======================= */
+  /* URL /exec de la aplicación web de Apps Script (se usa si este panel no se sirve desde Apps Script). */
+  var ENCUESTA_URL_DEFAULT = 'https://script.google.com/macros/s/AKfycbwq9M8QajLafPUY7DdI_Kj53-jRDCPsLEw-Qzqi1nGCiWGhM2sv2mmpaIlgqKVbFWQt/exec';
+
+  /* Página pública de la encuesta (GitHub Pages). Si se indica, los QR abren esta página en lugar de
+     Apps Script: así funciona aunque el celular tenga varias cuentas de Google abiertas.
+     Déjela vacía ('') para que los QR apunten directamente a Apps Script. */
+  var ENCUESTA_PUBLICA_URL = 'https://srivasipl.github.io/sirea/';
+
+  /* Unidades: el texto completo es lo que se muestra en la ficha y se guarda en la hoja. */
+  var UNIDADES = [
+    'Instituto Especializado de Estudios Superiores Loyola (Sede Central)',
+    'Instituto Especializado de Estudios Superiores Loyola (Extensión Dajabón)',
+    'Posgrado y Formación Profesional',
+    'Educación Continuada',
+    'Escuela de Idiomas',
+    'Instituto Politécnico Loyola (Primer y Segundo Ciclo de Secundaria)',
+    'Escuela Primaria P. Silvio González, S.J. (Inicial y Primaria)'
+  ];
+
+  /* Áreas de la institución: [nombre, código]. Se guarda el nombre; el código se muestra en el desplegable. */
+  var AREAS = [
+    ['Rectoría', 'RE'],
+    ['Consejo Rector', 'CR'],
+    ['Consejo Académico y Pedagógico', 'AC'],
+    ['Finanzas', 'FI'],
+    ['Administración', 'AM'],
+    ['Servicios Generales', 'SG'],
+    ['Gestión Humana', 'GH'],
+    ['Planificación y Ejecución', 'PE'],
+    ['Proyección Institucional', 'PI'],
+    ['Comunicación Corporativa', 'CC'],
+    ['Pastoral', 'PA'],
+    ['Tecnología de la Información y la Comunicación', 'TIC'],
+    ['Investigación', 'IN'],
+    ['Postgrado y Formación Profesional', 'PFP'],
+    ['Procesos Académicos', 'PAC'],
+    ['Asuntos Estudiantiles', 'DAE'],
+    ['Educación Continuada', 'EC'],
+    ['Niveles Inicial y Primario', 'PRI'],
+    ['Secundaria', 'SEC'],
+    ['Instituto Especializado de Estudios Superiores Loyola', 'IEESL'],
+    ['Vicerrectoría Académica y Pedagógica', 'VAC'],
+    ['Centro Socioambiental Loyola', 'CSL'],
+    ['Centro de Prototipado y Transferencia Tecnológica', 'CPTT']
+  ];
+
+  /* Paleta compartida con encuesta.html y resultados.html (Tailwind). */
+  var COLORES = {
+    slate900: '#0f172a', slate600: '#475569', slate500: '#64748b', slate400: '#94a3b8',
+    slate300: '#cbd5e1', blue600: '#2563eb', blue700: '#1d4ed8', blue400: '#60a5fa', blanco: '#ffffff'
+  };
+  /* ============================================================= */
+
+  // Apps Script (doGet) reemplaza este texto por la URL /exec. Fuera de Apps Script queda null.
+  var CTX_INYECTADO = '__SIREA_CTX__';
+  if (typeof CTX_INYECTADO !== 'object') CTX_INYECTADO = null;
+  var $ = function (id) { return document.getElementById(id); };
+
+  /* lista: textos o pares [valor, código]. */
+  function llenarSelect(sel, lista) {
+    var e = function (t) { return t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;'); };
+    var html = '<option value="" selected disabled>Seleccione…</option>';
+    lista.forEach(function (item) {
+      var valor = Array.isArray(item) ? item[0] : item;
+      var etiqueta = Array.isArray(item) ? item[0] + ' (' + item[1] + ')' : item;
+      html += '<option value="' + e(valor) + '">' + e(etiqueta) + '</option>';
+    });
+    sel.innerHTML = html;
+  }
+  llenarSelect($('u'), UNIDADES);
+  llenarSelect($('a'), AREAS);
+
+  $('base').value = (CTX_INYECTADO && CTX_INYECTADO.apiUrl) || ENCUESTA_URL_DEFAULT; // se normaliza más abajo
+
+  /* Enlace a la página de resultados.
+     - Con página pública (GitHub Pages): …/resultados.html#k=CLAVE. Lo que va después de # nunca se
+       envía al servidor, y la página funciona aunque haya varias cuentas de Google abiertas.
+     - Sin página pública: …/exec?p=resultados&k=CLAVE (Apps Script). */
+  function urlResultados(base, clave) {
+    var publica = ($('publica') && $('publica').value.trim()) || '';
+    if (publica && !problemaUrlPublica(publica)) {
+      var pub = new URL('resultados.html', publica);
+      if (clave) pub.hash = 'k=' + encodeURIComponent(clave);
+      return pub.toString();
+    }
+    var url = new URL(base);
+    url.search = '';
+    url.searchParams.set('p', 'resultados');
+    if (clave) url.searchParams.set('k', clave);
+    return url.toString();
+  }
+  function actualizarPanelResultados() {
+    try { $('btn-panel-resultados').href = urlResultados($('base').value.trim()); } catch (e) { /* URL base inválida */ }
+  }
+  actualizarPanelResultados();
+  $('base').addEventListener('change', actualizarPanelResultados);
+
+  /* Evita generar QR que no abren: URL de ejemplo sin configurar, URL /dev (solo funciona para
+     editores del script) o direcciones que no son la aplicación web /exec. Devuelve el problema o ''. */
+  function problemaUrlBase(base) {
+    var url;
+    try { url = new URL(base); } catch (e) { return 'La URL base de la encuesta no es válida.'; }
+    if (/PEGAR_AQUI/.test(base)) {
+      return 'Falta configurar la URL de la encuesta: pegue la URL /exec de Apps Script en "Configuración avanzada" ' +
+             '(o abra este panel desde …/exec?p=inicio). Con la URL de ejemplo el QR no abre.';
+    }
+    if (/\/dev$/.test(url.pathname)) {
+      return 'Está usando la URL de prueba (/dev), que solo funciona para los editores del script. ' +
+             'Use la URL de la implementación, que termina en /exec.';
+    }
+    if (!/\/exec$/.test(url.pathname)) {
+      return 'La URL base debe ser la de la aplicación web de Apps Script y terminar en /exec.';
+    }
+    if (url.hostname === 'script.google.com') {
+      // /macros/s/ID/exec  o, en Google Workspace, /a/macros/DOMINIO/s/ID/exec
+      var m = url.pathname.match(/\/macros\/(?:[^/]+\/)?s\/([^/]+)\/exec$/);
+      if (!m) return 'La URL de Apps Script no tiene el formato esperado (…/macros/s/ID/exec).';
+      // Los ID de implementación empiezan por "AKfy". Un ID que empieza distinto suele ser el ID del
+      // proyecto (copiado de la barra del editor) y Google responde "el archivo que has solicitado no existe".
+      if (!/^AKfy/.test(m[1])) {
+        return 'Esa URL usa el ID del proyecto, no el de la implementación, y Google responde "el archivo no existe". ' +
+               'Copie la URL desde Implementar ▸ Gestionar implementaciones ▸ Aplicación web (empieza por …/macros/s/AKfy… y termina en /exec).';
+      }
+    }
+    return '';
+  }
+  window.SIREA_problemaUrlBase = problemaUrlBase; // expuesto para pruebas
+
+  /* Deja la URL en la forma general https://script.google.com/macros/s/ID/exec:
+     - quita el índice de cuenta (/macros/u/1/s/…), que solo funciona en el navegador de quien lo copió;
+     - quita el dominio institucional (/a/ipl.edu.do/macros/… o /a/macros/ipl.edu.do/…): si el celular
+       tiene abierta otra cuenta de Google, esa forma responde "el archivo que has solicitado no existe". */
+  function normalizarUrlBase(base) {
+    base = base.trim();
+    var m = base.match(/^https:\/\/script\.google\.com\/.*?\/s\/(AKfy[^/?#]+)\/exec/);
+    return m ? 'https://script.google.com/macros/s/' + m[1] + '/exec' : base;
+  }
+  window.SIREA_normalizarUrlBase = normalizarUrlBase; // expuesto para pruebas
+  $('base').value = normalizarUrlBase($('base').value);
+  actualizarPanelResultados();
+  $('publica').value = ENCUESTA_PUBLICA_URL;
+
+  /* Valida la página pública: vacía (no se usa) o una dirección https que no sea de Apps Script. */
+  function problemaUrlPublica(v) {
+    if (!v) return '';
+    var url;
+    try { url = new URL(v); } catch (e) { return 'La dirección de la página pública no es válida.'; }
+    if (url.hostname === 'script.google.com') return 'La página pública no debe ser de Apps Script: use la dirección de GitHub Pages.';
+    if (url.protocol !== 'https:' && url.hostname !== 'localhost' && url.hostname !== '127.0.0.1') {
+      return 'La página pública debe empezar por https://';
+    }
+    return '';
+  }
+  window.SIREA_problemaUrlPublica = problemaUrlPublica; // expuesto para pruebas
+  actualizarPanelResultados();
+  $('publica').addEventListener('change', actualizarPanelResultados);
+
+  /* Parámetros del enlace del estudiante. El curso va como "cu": Apps Script reserva el nombre "c"
+     y responde "No se pudo abrir el archivo" si un enlace lo usa. */
+  var PARAMETROS = { u: 'u', a: 'a', c: 'cu', d: 'd', s: 's' };
+  function generarUrl(base, datos) {
+    var url = new URL(base);
+    Object.keys(PARAMETROS).forEach(function (k) { url.searchParams.set(PARAMETROS[k], datos[k]); });
+    return url.toString();
+  }
+
+  /* Clave privada k (solo la conoce el docente) y su huella pública s = SHA-256(k), 20 hex.
+     El enlace del estudiante lleva s; con s no se puede obtener k. Debe coincidir con Code.gs. */
+  function claveAleatoria() {
+    var b = new Uint8Array(24);
+    crypto.getRandomValues(b);
+    return btoa(String.fromCharCode.apply(null, b)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  }
+  function huella(clave) {
+    if (!window.crypto || !crypto.subtle) return Promise.reject(new Error('El navegador no permite generar la clave (se requiere HTTPS).'));
+    return crypto.subtle.digest('SHA-256', new TextEncoder().encode(clave)).then(function (buf) {
+      return Array.prototype.map.call(new Uint8Array(buf), function (x) { return (x < 16 ? '0' : '') + x.toString(16); }).join('').slice(0, 20);
+    });
+  }
+  window.SIREA_huella = huella; // expuesto para pruebas
+
+  /* Acortador is.gd por JSONP (no depende de CORS, funciona dentro del iFrame de Sites).
+     Si falla, se usa el enlace completo. Reemplazable en pruebas: window.SIREA_acortar. */
+  function acortarIsGd(url) {
+    return new Promise(function (resolve, reject) {
+      var cb = 'sireaIsGd_' + Date.now() + '_' + Math.floor(Math.random() * 1e6);
+      var s = document.createElement('script');
+      var t = setTimeout(function () { limpiar(); reject(new Error('Tiempo agotado')); }, 8000);
+      function limpiar() { clearTimeout(t); delete window[cb]; if (s.parentNode) s.parentNode.removeChild(s); }
+      window[cb] = function (r) {
+        limpiar();
+        if (r && r.shorturl) resolve(r.shorturl);
+        else reject(new Error((r && r.errormessage) || 'Sin enlace corto'));
+      };
+      s.onerror = function () { limpiar(); reject(new Error('No se pudo contactar is.gd')); };
+      s.src = 'https://is.gd/create.php?format=json&callback=' + cb + '&url=' + encodeURIComponent(url);
+      document.head.appendChild(s);
+    });
+  }
+  window.SIREA_acortar = window.SIREA_acortar || acortarIsGd;
+
+  function pintarQR(texto) {
+    var cont = $('qr');
+    cont.innerHTML = '';
+    if (typeof QRCode === 'undefined') {
+      cont.innerHTML = '<p class="text-xs text-rose-600">No se pudo cargar el generador de QR.</p>';
+      return;
+    }
+    // Módulos en slate-900 (mismo tono que la cabecera), fondo blanco: buen contraste para escanear.
+    new QRCode(cont, { text: texto, width: 220, height: 220, colorDark: COLORES.slate900, colorLight: COLORES.blanco,
+                       correctLevel: QRCode.CorrectLevel.M });
+  }
+
+  /* Ficha descargable (PNG) con la identidad visual de SIREA:
+     cabecera oscura con franja azul, QR, curso, docente, área (azul), unidad y enlace. */
+  function ajustarLineas(ctx, texto, ancho) {
+    var palabras = texto.split(' '), lineas = [], actual = '';
+    palabras.forEach(function (p) {
+      var prueba = actual ? actual + ' ' + p : p;
+      if (ctx.measureText(prueba).width > ancho && actual) { lineas.push(actual); actual = p; }
+      else actual = prueba;
+    });
+    if (actual) lineas.push(actual);
+    return lineas;
+  }
+  function rectRedondeado(ctx, x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y); ctx.lineTo(x + w - r, y); ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+    ctx.lineTo(x + w, y + h - r); ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+    ctx.lineTo(x + r, y + h); ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+    ctx.lineTo(x, y + r); ctx.quadraticCurveTo(x, y, x + r, y);
+    ctx.closePath();
+  }
+  function fichaPNG(datos, enlace) {
+    var qrCanvas = $('qr').querySelector('canvas');
+    if (!qrCanvas) return null;
+    var W = 700, M = 50, QR = 400, CAB = 96, FRANJA = 8;
+    var fuente = 'system-ui, -apple-system, "Segoe UI", sans-serif';
+    var bloques = [
+      { t: 'ESCANEE PARA EVALUAR', font: 'bold 16px ' + fuente, color: COLORES.slate400, lh: 24, gap: 0, antesQR: true },
+      { t: datos.c, font: 'bold 30px ' + fuente, color: COLORES.slate900, lh: 40, gap: 0 },
+      { t: 'Docente: ' + datos.d, font: '22px ' + fuente, color: COLORES.slate600, lh: 32 },
+      { t: 'Área: ' + datos.a, font: '600 22px ' + fuente, color: COLORES.blue700, lh: 32 },
+      { t: datos.u, font: '20px ' + fuente, color: COLORES.slate500, lh: 30 }
+    ];
+    var c = document.createElement('canvas'), ctx = c.getContext('2d');
+    var alto = CAB + FRANJA + M;
+    bloques.forEach(function (b) {
+      ctx.font = b.font;
+      b.lineas = ajustarLineas(ctx, b.t, W - 2 * M);
+      alto += (b.gap == null ? 6 : b.gap) + b.lineas.length * b.lh;
+      if (b.antesQR) alto += 16 + QR + 36;
+    });
+    var CAJA = 64; // caja del enlace
+    alto += 26 + CAJA + M;
+    c.width = W; c.height = alto;
+
+    // Fondo y cabecera (bg-slate-900 + border-b-4 border-blue-600)
+    ctx.fillStyle = COLORES.blanco; ctx.fillRect(0, 0, W, c.height);
+    ctx.fillStyle = COLORES.slate900; ctx.fillRect(0, 0, W, CAB);
+    ctx.fillStyle = COLORES.blue600; ctx.fillRect(0, CAB, W, FRANJA);
+    ctx.textBaseline = 'top'; ctx.textAlign = 'left';
+    ctx.font = 'bold 26px ' + fuente; ctx.fillStyle = COLORES.blanco;
+    ctx.fillText('SIREA – IPL / IEESL', M, 24);
+    ctx.font = '17px ' + fuente; ctx.fillStyle = COLORES.slate300;
+    ctx.fillText('Retroalimentación de la Experiencia Académica', M, 58);
+
+    var y = CAB + FRANJA + M;
+    ctx.textAlign = 'center';
+    bloques.forEach(function (b) {
+      y += b.gap == null ? 6 : b.gap;
+      ctx.font = b.font; ctx.fillStyle = b.color;
+      b.lineas.forEach(function (l) { ctx.fillText(l, W / 2, y); y += b.lh; });
+      if (b.antesQR) {
+        y += 16;
+        ctx.strokeStyle = '#e2e8f0'; ctx.lineWidth = 2;
+        rectRedondeado(ctx, (W - QR) / 2 - 16, y - 16, QR + 32, QR + 32, 18); ctx.stroke();
+        ctx.imageSmoothingEnabled = false;
+        ctx.drawImage(qrCanvas, (W - QR) / 2, y, QR, QR);
+        y += QR + 36;
+      }
+    });
+
+    // Caja del enlace (como el campo del panel)
+    y += 26;
+    ctx.fillStyle = '#f8fafc'; ctx.strokeStyle = COLORES.slate300; ctx.lineWidth = 2;
+    rectRedondeado(ctx, M, y, W - 2 * M, CAJA, 12); ctx.fill(); ctx.stroke();
+    ctx.font = '24px ui-monospace, Consolas, monospace'; ctx.fillStyle = COLORES.slate900; ctx.textBaseline = 'middle';
+    var txt = enlace;
+    while (ctx.measureText(txt).width > W - 2 * M - 30 && txt.length > 10) txt = txt.slice(0, -2);
+    if (txt !== enlace) txt = txt.slice(0, -1) + '…';
+    ctx.fillText(txt, W / 2, y + CAJA / 2);
+    return c.toDataURL('image/png');
+  }
+
+  function leerDatos() {
+    return { u: $('u').value, a: $('a').value, c: $('c').value.trim(), d: $('d').value.trim() };
+  }
+
+  $('form').addEventListener('submit', function (ev) {
+    ev.preventDefault();
+    var datos = leerDatos();
+    var faltan = [];
+    var nombres = { u: 'Unidad', a: 'Área', c: 'Curso', d: 'Docente' };
+    ['u', 'a', 'c', 'd'].forEach(function (k) {
+      var campo = $(k);
+      var vacio = !datos[k];
+      campo.classList.toggle('border-rose-500', vacio);
+      campo.classList.toggle('bg-rose-50', vacio);
+      campo.classList.toggle('border-slate-300', !vacio);
+      campo.classList.toggle('bg-white', !vacio);
+      if (vacio) faltan.push(nombres[k]);
+    });
+    var err = $('form-error');
+    if (faltan.length) {
+      err.textContent = 'Complete los campos marcados en rojo: ' + faltan.join(', ') + '.';
+      err.classList.remove('hidden');
+      return;
+    }
+    var base = normalizarUrlBase($('base').value);
+    $('base').value = base;
+    var publica = $('publica').value.trim();
+    var problema = problemaUrlBase(base) || problemaUrlPublica(publica);
+    if (problema) {
+      err.textContent = problema;
+      err.classList.remove('hidden');
+      $('base').closest('details').open = true;
+      return;
+    }
+    err.classList.add('hidden');
+
+    var btn = $('btn-generar');
+    btn.disabled = true;
+    $('btn-generar-texto').textContent = 'Generando…';
+    var clave = claveAleatoria();
+    var largo, privado;
+    huella(clave)
+      .then(function (s) {
+        datos.s = s;
+        largo = generarUrl(publica || base, datos); // el QR abre la página pública si existe
+        privado = urlResultados(base, clave);
+        return window.SIREA_acortar(largo)
+          .then(function (corto) { return { enlace: corto, corto: true }; })
+          .catch(function () { return { enlace: largo, corto: false }; });
+      })
+      .then(function (r) {
+        $('link-resultados').value = privado;
+        $('copia-estado-resultados').textContent = '';
+        delete $('copia-estado-resultados').dataset.metodo;
+        $('f-curso').textContent = datos.c;
+        $('f-docente').textContent = 'Docente: ' + datos.d;
+        $('f-area').textContent = 'Área: ' + datos.a;
+        $('f-unidad').textContent = datos.u;
+        $('link').value = r.enlace;
+        $('link').dataset.corto = r.corto ? '1' : '0';
+        $('link-largo').textContent = largo;
+        $('btn-copiar-texto').textContent = r.corto ? 'Copiar Enlace Corto' : 'Copiar Enlace';
+        $('btn-abrir').href = largo;
+        $('copia-estado').textContent = '';
+        delete $('copia-estado').dataset.metodo;
+        pintarQR(r.enlace); // el QR apunta al enlace corto: menos módulos, más fácil de escanear
+        var png = fichaPNG(datos, r.enlace);
+        if (png) $('btn-descargar').href = png;
+        $('btn-descargar').download = 'QR_' + (datos.c + '_' + datos.d).replace(/[^\w\-]+/g, '_').slice(0, 60) + '.png';
+        $('resultado').classList.remove('hidden');
+        $('resultado').scrollIntoView({ behavior: 'smooth', block: 'start' });
+      })
+      .catch(function (e) {
+        err.textContent = 'No se pudo generar el enlace: ' + (e && e.message ? e.message : e);
+        err.classList.remove('hidden');
+      })
+      .then(function () {
+        btn.disabled = false;
+        $('btn-generar-texto').textContent = 'Generar enlace y QR';
+      });
+  });
+
+  /* Copiado compatible con iFrames de Google Sites:
+     1) API moderna (suele estar bloqueada en iFrames sin permiso clipboard-write);
+     2) respaldo con document.execCommand('copy');
+     3) último recurso: dejar el texto seleccionado para Ctrl+C. */
+  function copiarTexto(texto) {
+    function respaldo() {
+      var ta = document.createElement('textarea');
+      ta.value = texto;
+      ta.setAttribute('readonly', '');
+      ta.style.position = 'fixed';
+      ta.style.top = '0';
+      ta.style.left = '0';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.focus();
+      ta.select();
+      ta.setSelectionRange(0, texto.length);
+      var ok = false;
+      try { ok = document.execCommand('copy'); } catch (e) { ok = false; }
+      document.body.removeChild(ta);
+      return ok ? 'execCommand' : false;
+    }
+    if (navigator.clipboard && window.isSecureContext) {
+      return navigator.clipboard.writeText(texto)
+        .then(function () { return 'clipboard'; })
+        .catch(respaldo);
+    }
+    return Promise.resolve(respaldo());
+  }
+  window.SIREA_copiarTexto = copiarTexto; // expuesto para pruebas
+
+  function botonCopiar(btnId, inputId, estadoId) {
+    $(btnId).addEventListener('click', function () {
+      var input = $(inputId), estado = $(estadoId);
+      copiarTexto(input.value).then(function (metodo) {
+        if (metodo) {
+          estado.className = 'mt-2 min-h-[1rem] text-xs font-semibold text-emerald-700';
+          estado.innerHTML = '<i class="fa-solid fa-check"></i> Enlace copiado al portapapeles.';
+          estado.dataset.metodo = metodo;
+        } else {
+          input.focus();
+          input.select();
+          estado.className = 'mt-2 min-h-[1rem] text-xs font-semibold text-amber-700';
+          estado.textContent = 'Su navegador bloqueó el copiado automático. El enlace está seleccionado: presione Ctrl+C (o ⌘+C).';
+          estado.dataset.metodo = 'manual';
+        }
+      });
+    });
+  }
+  botonCopiar('btn-copiar', 'link', 'copia-estado');
+  botonCopiar('btn-copiar-resultados', 'link-resultados', 'copia-estado-resultados');
+})();
+</script>
+</body>
+</html>
