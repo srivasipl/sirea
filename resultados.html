@@ -63,6 +63,41 @@
         </div>
       </div>
 
+      <!-- Solo administración: editor de preguntas -->
+      <div id="editor-wrap" class="hidden bg-white rounded-2xl border border-slate-200 p-4 shadow-sm">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <h2 class="text-sm font-bold text-slate-900"><i class="fa-solid fa-pen-to-square text-blue-600"></i> Preguntas de la encuesta</h2>
+            <p id="editor-estado" class="text-[11px] text-slate-500">Se usan las preguntas originales.</p>
+          </div>
+          <button id="btn-editar" type="button" class="rounded-lg border border-blue-600 bg-white px-3 py-2 text-xs font-semibold text-blue-700 hover:bg-blue-50">
+            <i class="fa-solid fa-pen"></i> Editar preguntas
+          </button>
+        </div>
+        <div id="editor" class="hidden mt-4 space-y-4">
+          <p class="bg-amber-50 border-l-4 border-amber-500 p-3 rounded-r-xl text-[11px] text-amber-900">
+            <b>Importante:</b> son siempre 27 afirmaciones y 5 preguntas abiertas, porque cada una tiene su columna en la hoja (P1–P27, f1–f5).
+            Si cambia el <b>sentido</b> de una pregunta durante un período de evaluación, en la misma columna quedarán respuestas a preguntas distintas.
+            Haga los cambios <b>antes</b> de iniciar el período. Los cambios se ven en la encuesta en cuanto se guardan.
+          </p>
+          <datalist id="secciones"></datalist>
+          <div id="editor-likert" class="space-y-2"></div>
+          <h3 class="text-xs font-bold text-slate-900 uppercase tracking-wider border-t border-slate-200 pt-3">VII. Preguntas abiertas</h3>
+          <p class="text-[11px] text-slate-500 -mt-2">Las preguntas 1 a 4 son obligatorias; la 5 es opcional.</p>
+          <div id="editor-abiertas" class="space-y-2"></div>
+          <p id="editor-mensaje" role="alert" class="hidden rounded-lg p-3 text-xs"></p>
+          <div class="flex flex-wrap gap-2">
+            <button id="btn-guardar-preguntas" type="button" class="rounded-lg bg-emerald-600 hover:bg-emerald-700 px-4 py-2 text-xs font-semibold text-white disabled:opacity-60">
+              <i class="fa-solid fa-floppy-disk"></i> Guardar cambios
+            </button>
+            <button id="btn-cancelar-preguntas" type="button" class="rounded-lg border border-slate-300 bg-white px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50">Cancelar</button>
+            <button id="btn-restaurar-preguntas" type="button" class="ml-auto rounded-lg border border-rose-300 bg-white px-4 py-2 text-xs font-semibold text-rose-700 hover:bg-rose-50">
+              <i class="fa-solid fa-rotate-left"></i> Volver a las preguntas originales
+            </button>
+          </div>
+        </div>
+      </div>
+
       <!-- Solo administración: resumen por curso -->
       <div id="cursos-wrap" class="hidden bg-white rounded-2xl border border-slate-200 p-4 shadow-sm">
         <h2 class="text-sm font-bold text-slate-900 mb-1">Resumen por curso</h2>
@@ -138,7 +173,9 @@
   var CTX_INYECTADO = '__SIREA_CTX__';
   if (typeof CTX_INYECTADO !== 'object') CTX_INYECTADO = null;
 
-  var PREGUNTAS = [
+  /* Preguntas originales. Si la administración las editó, el servidor envía las nuevas
+     junto con los resultados y reemplazan a estas (aplicarPreguntas). */
+  var PREGUNTAS_BASE = [
     ['I. Dominio y desempeño del docente', 'El docente demuestra dominio de los contenidos que imparte.'],
     ['I. Dominio y desempeño del docente', 'Explica los conceptos de manera clara y comprensible.'],
     ['I. Dominio y desempeño del docente', 'Relaciona los contenidos con ejemplos o situaciones prácticas.'],
@@ -167,13 +204,25 @@
     ['VI. Servicios, espacios y recursos', 'Plataformas digitales o tecnología facilitaron aprendizaje.'],
     ['VI. Servicios, espacios y recursos', 'Servicios de apoyo respondieron oportunamente.']
   ];
-  var ABIERTAS = [
-    '1. Aspectos más positivos del desempeño del docente',
-    '2. Qué podría mejorar el docente',
-    '3. Mejoras en espacios, equipos o materiales',
-    '4. Recomendaciones para la experiencia de aprendizaje',
-    '5. Otras formaciones o temas de interés'
+  var ABIERTAS_BASE = [
+    '¿Qué aspectos del desempeño del docente consideras más positivos?',
+    '¿Qué podría mejorar el docente en su forma de impartir la clase?',
+    '¿Qué aspectos de los espacios, equipos o materiales deberían mejorarse?',
+    '¿Qué recomendaciones harías para mejorar la experiencia de aprendizaje?',
+    '¿Qué otras formaciones o temas le interesaría recibir?'
   ];
+  var PREGUNTAS = PREGUNTAS_BASE.slice();
+  var ABIERTAS = ABIERTAS_BASE.slice();
+  var preguntasEditadas = null;   // lo que hay guardado en el servidor (null = originales)
+  var claveActual = '';
+
+  function sinNumero(t) { return String(t || '').replace(/^\s*\d+\.\s*/, ''); }
+  function aplicarPreguntas(p) {
+    var valida = p && p.likert && p.likert.length === PREGUNTAS_BASE.length && p.abiertas && p.abiertas.length === ABIERTAS_BASE.length;
+    preguntasEditadas = valida ? p : null;
+    PREGUNTAS = valida ? p.likert.map(function (q) { return [q.sec, sinNumero(q.txt)]; }) : PREGUNTAS_BASE.slice();
+    ABIERTAS = valida ? p.abiertas.map(function (q) { return sinNumero(q.txt); }) : ABIERTAS_BASE.slice();
+  }
 
   var $ = function (id) { return document.getElementById(id); };
   function esc(s) {
@@ -199,12 +248,16 @@
     try {
       if (window.parent !== window && window.parent.SIREA_PRUEBAS) return window.parent.SIREA_PRUEBAS[nombre](arg);
     } catch (e) { /* padre de otro origen */ }
-    if (nombre === 'obtenerResultados' && !/PEGAR_AQUI/.test(API_URL_DEFAULT)) {
+    var cuerpos = {
+      obtenerResultados: function (a) { return { accion: 'resultados', clave: a }; },
+      guardarPreguntas: function (a) { return { accion: 'guardarPreguntas', clave: a.clave, preguntas: a.preguntas }; }
+    };
+    if (cuerpos[nombre] && !/PEGAR_AQUI/.test(API_URL_DEFAULT)) {
       return fetch(API_URL_DEFAULT, {
         method: 'POST',
         credentials: 'omit',
         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: JSON.stringify({ accion: 'resultados', clave: arg })
+        body: JSON.stringify(cuerpos[nombre](arg))
       })
         .then(function (r) { return r.json(); })
         .then(function (j) { if (!j || j.ok === false) throw new Error((j && j.error) || 'Respuesta vacía'); return j; });
@@ -306,7 +359,7 @@
     var orden = mezclar(filas);
     $('comentarios').innerHTML = ABIERTAS.map(function (titulo, j) {
       var textos = orden.map(function (f) { return f.f[j]; }).filter(function (t) { return t && t.trim(); });
-      return '<div><h3 class="text-xs font-bold text-slate-800 mb-1.5">' + esc(titulo) + ' <span class="font-normal text-slate-400">(' + textos.length + ')</span></h3>' +
+      return '<div><h3 class="text-xs font-bold text-slate-800 mb-1.5">' + (j + 1) + '. ' + esc(titulo) + ' <span class="font-normal text-slate-400">(' + textos.length + ')</span></h3>' +
         (textos.length ? '<ul class="space-y-1.5">' + textos.map(function (t) {
           return '<li class="rounded-lg bg-slate-50 border border-slate-200 p-2 text-xs whitespace-pre-line break-words">' + esc(t) + '</li>';
         }).join('') + '</ul>' : '<p class="text-xs text-slate-400">Sin comentarios.</p>') + '</div>';
@@ -471,9 +524,99 @@
     llenarCursos();
     $('filtro-wrap').classList.remove('hidden');
     $('cursos-wrap').classList.remove('hidden');
+    prepararEditor(mostrar);
     mostrar();
     $('vista').classList.remove('hidden');
   }
+
+  /* ---------- Editor de preguntas (solo administración) ---------- */
+  function estadoEditor() {
+    $('editor-estado').textContent = preguntasEditadas
+      ? 'Preguntas editadas' + (preguntasEditadas.actualizado ? ' el ' + fechaLocal(preguntasEditadas.actualizado) : '') + '.'
+      : 'Se usan las preguntas originales.';
+  }
+  function mensajeEditor(texto, tipo) {
+    var m = $('editor-mensaje');
+    m.textContent = texto;
+    m.className = 'rounded-lg p-3 text-xs ' + (tipo === 'error' ? 'bg-rose-50 text-rose-800' : 'bg-emerald-50 text-emerald-800');
+    m.classList.toggle('hidden', !texto);
+  }
+  function llenarEditor() {
+    var secciones = {};
+    PREGUNTAS.forEach(function (q) { secciones[q[0]] = true; });
+    PREGUNTAS_BASE.forEach(function (q) { secciones[q[0]] = true; });
+    $('secciones').innerHTML = Object.keys(secciones).map(function (s) { return '<option value="' + esc(s) + '">'; }).join('');
+    var campo = 'w-full rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500';
+    $('editor-likert').innerHTML = PREGUNTAS.map(function (q, i) {
+      var n = i + 1;
+      return '<div class="flex gap-2 items-start rounded-lg bg-slate-50 border border-slate-200 p-2">' +
+        '<span class="w-6 shrink-0 text-xs font-bold text-blue-900 pt-1.5">' + n + '.</span>' +
+        '<div class="flex-1 min-w-0 space-y-1">' +
+        '<input id="ed-sec-' + n + '" list="secciones" maxlength="80" aria-label="Sección de la afirmación ' + n + '" ' +
+        'class="w-full rounded-md border border-transparent bg-transparent px-1 py-0.5 text-[10px] font-bold uppercase tracking-wider text-blue-900 hover:border-slate-300 focus:border-slate-300 focus:bg-white focus:outline-none">' +
+        '<textarea id="ed-txt-' + n + '" rows="2" maxlength="220" aria-label="Texto de la afirmación ' + n + '" class="' + campo + ' resize-y"></textarea>' +
+        '</div></div>';
+    }).join('');
+    $('editor-abiertas').innerHTML = ABIERTAS.map(function (t, j) {
+      var n = j + 1;
+      return '<div class="flex gap-2 items-start">' +
+        '<span class="w-6 shrink-0 text-xs font-bold text-blue-900 pt-1.5">' + n + '.</span>' +
+        '<textarea id="ed-f' + n + '" rows="2" maxlength="220" aria-label="Pregunta abierta ' + n + '" class="' + campo + ' flex-1 resize-y"></textarea></div>';
+    }).join('');
+    // Los valores se asignan como texto (no como HTML).
+    PREGUNTAS.forEach(function (q, i) { $('ed-sec-' + (i + 1)).value = q[0]; $('ed-txt-' + (i + 1)).value = q[1]; });
+    ABIERTAS.forEach(function (t, j) { $('ed-f' + (j + 1)).value = t; });
+  }
+  function leerEditor() {
+    return {
+      likert: PREGUNTAS.map(function (q, i) { return { sec: $('ed-sec-' + (i + 1)).value.trim(), txt: $('ed-txt-' + (i + 1)).value.trim() }; }),
+      abiertas: ABIERTAS.map(function (t, j) { return { txt: $('ed-f' + (j + 1)).value.trim() }; })
+    };
+  }
+  function guardarEnServidor(preguntas, redibujar, exito) {
+    $('btn-guardar-preguntas').disabled = true;
+    mensajeEditor('');
+    return llamar('guardarPreguntas', { clave: claveActual, preguntas: preguntas })
+      .then(function (r) {
+        aplicarPreguntas(r && r.preguntas);
+        estadoEditor();
+        llenarEditor();
+        redibujar();
+        mensajeEditor(exito, 'ok');
+      })
+      .catch(function (e) { mensajeEditor('No se pudo guardar: ' + (e && e.message ? e.message : e), 'error'); })
+      .then(function () { $('btn-guardar-preguntas').disabled = false; });
+  }
+  function prepararEditor(redibujar) {
+    $('editor-wrap').classList.remove('hidden');
+    estadoEditor();
+    $('btn-editar').onclick = function () {
+      var abierto = !$('editor').classList.contains('hidden');
+      if (!abierto) { llenarEditor(); mensajeEditor(''); }
+      $('editor').classList.toggle('hidden', abierto);
+    };
+    $('btn-cancelar-preguntas').onclick = function () { $('editor').classList.add('hidden'); mensajeEditor(''); };
+    $('btn-guardar-preguntas').onclick = function () {
+      var p = leerEditor();
+      var vacia = p.likert.findIndex(function (q) { return !q.sec || !q.txt; });
+      if (vacia >= 0) { mensajeEditor('Complete la sección y el texto de la afirmación ' + (vacia + 1) + '.', 'error'); return; }
+      var vaciaF = p.abiertas.findIndex(function (q) { return !q.txt; });
+      if (vaciaF >= 0) { mensajeEditor('Complete la pregunta abierta ' + (vaciaF + 1) + '.', 'error'); return; }
+      guardarEnServidor(p, redibujar, '✓ Preguntas guardadas. Los estudiantes las verán al abrir la encuesta.');
+    };
+    // Confirmación en dos pasos (window.confirm puede estar bloqueado dentro de Google Sites).
+    var btnR = $('btn-restaurar-preguntas'), textoR = btnR.innerHTML, esperaR = null;
+    btnR.onclick = function () {
+      if (!esperaR) {
+        btnR.textContent = '¿Seguro? Pulse otra vez para restaurar';
+        esperaR = setTimeout(function () { btnR.innerHTML = textoR; esperaR = null; }, 5000);
+        return;
+      }
+      clearTimeout(esperaR); esperaR = null; btnR.innerHTML = textoR;
+      guardarEnServidor(null, redibujar, '✓ Se restauraron las preguntas originales.');
+    };
+  }
+  window.SIREA_leerEditor = function () { return leerEditor(); }; // expuesto para pruebas
 
   function cargar(clave) {
     mensaje('');
@@ -485,6 +628,8 @@
     return llamar('obtenerResultados', clave)
       .then(function (r) {
         $('cargando').classList.add('hidden');
+        claveActual = clave;
+        aplicarPreguntas(r.preguntas);
         if (r.rol === 'admin') vistaAdmin(r); else vistaDocente(r);
       })
       .catch(function (e) {

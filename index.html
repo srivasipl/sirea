@@ -238,7 +238,10 @@
   })();
 
   /* ---------- Render de preguntas (ninguna opción preseleccionada) ---------- */
-  (function renderLikert() {
+  // El número se pone al mostrar la pregunta: el texto guardado puede venir con o sin "1. ".
+  function sinNumero(t) { return String(t || '').replace(/^\s*\d+\.\s*/, ''); }
+
+  function renderLikert() {
     var html = '', seccion = '';
     var BASE = 'border border-slate-200 bg-slate-50';
     PREGUNTAS.forEach(function (q) {
@@ -249,7 +252,7 @@
       var id = 'P' + q.id;
       html += '<fieldset id="q-' + id + '" data-campo="' + id + '" data-base="' + BASE + '" class="pregunta p-3 rounded-xl space-y-2 transition-colors ' + BASE + '">' +
         '<legend class="sr-only">Pregunta ' + q.id + '</legend>' +
-        '<p class="text-xs font-medium text-slate-800 leading-snug">' + esc(q.txt) + ' <span class="text-rose-500 font-bold">*</span></p>' +
+        '<p class="text-xs font-medium text-slate-800 leading-snug">' + q.id + '. ' + esc(sinNumero(q.txt)) + ' <span class="text-rose-500 font-bold">*</span></p>' +
         '<div class="grid grid-cols-6 gap-1 pt-1">';
       OPCIONES.forEach(function (op) {
         html += '<label class="likert-btn flex-1 cursor-pointer"><input type="radio" name="' + id + '" value="' + op + '" class="sr-only">' +
@@ -259,20 +262,63 @@
       html += '</div><p class="msg-error hidden text-[11px] font-semibold text-rose-600">Seleccione una opción.</p></fieldset>';
     });
     $('likert').innerHTML = html;
-  })();
+  }
 
-  (function renderAbiertas() {
-    $('abiertas').innerHTML = ABIERTAS.map(function (q) {
+  function renderAbiertas() {
+    $('abiertas').innerHTML = ABIERTAS.map(function (q, i) {
       var base = q.req ? 'border border-transparent' : 'border-t border-dashed border-slate-200';
       return '<div id="q-' + q.id + '" data-campo="' + q.id + '" data-base="' + base + '" class="' + (q.req ? 'pregunta ' : '') + 'p-2.5 rounded-xl transition-colors ' + base + '">' +
-        '<label for="' + q.id + '" class="block text-xs font-semibold ' + (q.req ? 'text-slate-700' : 'text-blue-900') + ' mb-1">' + esc(q.txt) +
+        '<label for="' + q.id + '" class="block text-xs font-semibold ' + (q.req ? 'text-slate-700' : 'text-blue-900') + ' mb-1">' + (i + 1) + '. ' + esc(sinNumero(q.txt)) +
         (q.req ? ' <span class="text-rose-500 font-bold">*</span>' : ' <span class="text-slate-500 font-normal">(Opcional)</span>') + '</label>' +
         '<textarea id="' + q.id + '" rows="2" maxlength="2000" placeholder="' + esc(q.ph) + '" ' +
         'class="w-full p-2 bg-slate-50 border border-slate-300 rounded-lg text-xs focus:ring-2 focus:ring-blue-500 focus:bg-white focus:outline-none"></textarea>' +
         (q.req ? '<p class="msg-error hidden mt-1 text-[11px] font-semibold text-rose-600">Esta pregunta es obligatoria.</p>' : '') +
         '</div>';
     }).join('');
-  })();
+  }
+
+  /* ---------- Preguntas editadas por la administración ----------
+     Se piden al servidor al abrir la encuesta. Si no hay preguntas editadas, o el servidor
+     no responde en 6 s, se usan las preguntas originales de arriba. */
+  function pedirPreguntas() {
+    if (window.google && google.script && google.script.run) {
+      return new Promise(function (res, rej) {
+        google.script.run.withSuccessHandler(res).withFailureHandler(rej).obtenerPreguntas();
+      });
+    }
+    try {
+      if (window.parent !== window && window.parent.SIREA_PRUEBAS && window.parent.SIREA_PRUEBAS.obtenerPreguntas) {
+        return window.parent.SIREA_PRUEBAS.obtenerPreguntas();
+      }
+    } catch (e) { /* padre de otro origen */ }
+    if (/PEGAR_AQUI/.test(API_URL)) return Promise.resolve(null);
+    return fetch(API_URL, {
+      method: 'POST',
+      credentials: 'omit',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ accion: 'preguntas' })
+    }).then(function (r) { return r.json(); })
+      .then(function (j) { return j && j.ok ? j.preguntas : null; });
+  }
+
+  function aplicarPreguntas(p) {
+    var valida = p && p.likert && p.likert.length === PREGUNTAS.length && p.abiertas && p.abiertas.length === ABIERTAS.length;
+    if (valida) {
+      PREGUNTAS = p.likert.map(function (q, i) { return { id: i + 1, sec: q.sec, txt: q.txt }; });
+      ABIERTAS = ABIERTAS.map(function (q, i) { return { id: q.id, txt: p.abiertas[i].txt, req: q.req, ph: q.ph }; });
+    }
+    renderLikert();
+    renderAbiertas();
+    document.body.setAttribute('data-preguntas', valida ? 'servidor' : 'originales');
+    $('btn-enviar').disabled = false;
+  }
+
+  $('likert').innerHTML = '<p class="text-center text-xs text-slate-500 py-6"><i class="fa-solid fa-spinner fa-spin"></i> Cargando preguntas…</p>';
+  $('btn-enviar').disabled = true;
+  Promise.race([
+    pedirPreguntas(),
+    new Promise(function (res) { setTimeout(function () { res(null); }, 6000); })
+  ]).catch(function () { return null; }).then(aplicarPreguntas);
 
   /* ---------- Validación ---------- */
   function respondida(campo) {
