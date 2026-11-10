@@ -525,6 +525,15 @@
   function estadoEditor() {
     var c = { likert: 0, abierta: 0, opcion: 0 };
     PREGUNTAS.forEach(function (q) { c[q.tipo] = (c[q.tipo] || 0) + 1; });
+    var sinLista = !PREGUNTAS.length; // el servidor publicado es anterior al constructor
+    $('btn-editar').disabled = sinLista;
+    $('btn-editar').classList.toggle('opacity-40', sinLista);
+    if (sinLista) {
+      $('editor').classList.add('hidden');
+      $('editor-estado').innerHTML = '<span class="font-semibold text-rose-700">El servidor no envió la lista de preguntas: ' +
+        'falta publicar el Code.gs nuevo en Apps Script (Implementar ▸ Gestionar implementaciones ▸ ✏️ ▸ Nueva versión).</span>';
+      return;
+    }
     $('editor-estado').textContent = PREGUNTAS.length + ' preguntas: ' + c.likert + ' de escala, ' + c.abierta +
       ' abiertas, ' + c.opcion + ' de opción única.';
   }
