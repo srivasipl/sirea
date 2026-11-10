@@ -131,14 +131,8 @@
                 </div>
             </div>
 
-            <!-- PREGUNTAS LIKERT (se generan con JS) -->
-            <div id="likert" class="space-y-4"></div>
-
-            <!-- PREGUNTAS ABIERTAS (se generan con JS) -->
-            <div class="border-t border-slate-200 pt-5 space-y-3.5">
-                <h3 class="text-xs font-bold text-slate-900 uppercase tracking-wider">VII. Preguntas Abiertas</h3>
-                <div id="abiertas" class="space-y-3.5"></div>
-            </div>
+            <!-- PREGUNTAS (se generan con JS a partir de la lista vigente: Likert, abiertas y de opción) -->
+            <div id="preguntas" class="space-y-4"></div>
 
             <button type="submit" id="btn-enviar" class="w-full bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white font-bold py-3.5 rounded-xl transition shadow text-xs sm:text-sm flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-wait">
                 <i class="fa-solid fa-paper-plane"></i> <span id="btn-enviar-texto">Enviar Retroalimentación Anonimizada</span>
@@ -161,45 +155,50 @@
   var CTX_INYECTADO = '__SIREA_CTX__';
   if (typeof CTX_INYECTADO !== 'object') CTX_INYECTADO = null;
 
-  /* Preguntas originales de SIREA (P1–P27). */
-  var PREGUNTAS = [
-    { id: 1,  sec: 'I. Dominio y desempeño del docente', txt: '1. El docente demuestra dominio de los contenidos que imparte.' },
-    { id: 2,  sec: 'I. Dominio y desempeño del docente', txt: '2. Explica los conceptos de manera clara y comprensible.' },
-    { id: 3,  sec: 'I. Dominio y desempeño del docente', txt: '3. Relaciona los contenidos con ejemplos o situaciones prácticas.' },
-    { id: 4,  sec: 'I. Dominio y desempeño del docente', txt: '4. Responde adecuadamente las preguntas de los estudiantes.' },
-    { id: 5,  sec: 'II. Planificación y desarrollo de la clase', txt: '5. Al inicio de la clase se presentan los objetivos esperados.' },
-    { id: 6,  sec: 'II. Planificación y desarrollo de la clase', txt: '6. Los contenidos se desarrollan de forma organizada.' },
-    { id: 7,  sec: 'II. Planificación y desarrollo de la clase', txt: '7. El tiempo de la clase se utiliza adecuadamente.' },
-    { id: 8,  sec: 'II. Planificación y desarrollo de la clase', txt: '8. Las actividades contribuyen al logro de los objetivos.' },
-    { id: 9,  sec: 'III. Metodología y participación', txt: '9. Utiliza estrategias que facilitan la comprensión.' },
-    { id: 10, sec: 'III. Metodología y participación', txt: '10. Promueve la participación activa de los estudiantes.' },
-    { id: 11, sec: 'III. Metodología y participación', txt: '11. Utiliza recursos didácticos apropiados.' },
-    { id: 12, sec: 'III. Metodología y participación', txt: '12. Estimula el análisis y el pensamiento crítico.' },
-    { id: 13, sec: 'IV. Clima del aula e interacción', txt: '13. El docente trata a los estudiantes con respeto.' },
-    { id: 14, sec: 'IV. Clima del aula e interacción', txt: '14. Promueve un ambiente de confianza para opiniones.' },
-    { id: 15, sec: 'IV. Clima del aula e interacción', txt: '15. Escucha y considera las inquietudes planteadas.' },
-    { id: 16, sec: 'V. Aprendizaje y valoración general', txt: '16. La clase me permitió comprender mejor el tema.' },
-    { id: 17, sec: 'V. Aprendizaje y valoración general', txt: '17. Las actividades me ayudaron a aplicar lo aprendido.' },
-    { id: 18, sec: 'V. Aprendizaje y valoración general', txt: '18. En términos generales, la clase fue efectiva.' },
-    { id: 19, sec: 'VI. Servicios, espacios y recursos', txt: '19. Las aulas o espacios son adecuados.' },
-    { id: 20, sec: 'VI. Servicios, espacios y recursos', txt: '20. Los talleres/laboratorios cuentan con buenas condiciones.' },
-    { id: 21, sec: 'VI. Servicios, espacios y recursos', txt: '21. Los equipos requeridos estuvieron disponibles.' },
-    { id: 22, sec: 'VI. Servicios, espacios y recursos', txt: '22. Los equipos o máquinas funcionaron adecuadamente.' },
-    { id: 23, sec: 'VI. Servicios, espacios y recursos', txt: '23. Insumos y materiales suficientes para prácticas.' },
-    { id: 24, sec: 'VI. Servicios, espacios y recursos', txt: '24. Instrucciones de uso y seguridad adecuadas.' },
-    { id: 25, sec: 'VI. Servicios, espacios y recursos', txt: '25. Disponibilidad de equipos de protección personal.' },
-    { id: 26, sec: 'VI. Servicios, espacios y recursos', txt: '26. Plataformas digitales o tecnología facilitaron aprendizaje.' },
-    { id: 27, sec: 'VI. Servicios, espacios y recursos', txt: '27. Servicios de apoyo respondieron oportunamente.' }
-  ];
-
-  /* Preguntas abiertas originales (f1–f4 obligatorias, f5 opcional). */
-  var ABIERTAS = [
-    { id: 'f1', txt: '1. ¿Qué aspectos del desempeño del docente consideras más positivos?', req: true, ph: 'Escriba aquí...' },
-    { id: 'f2', txt: '2. ¿Qué podría mejorar el docente en su forma de impartir la clase?', req: true, ph: 'Escriba aquí...' },
-    { id: 'f3', txt: '3. ¿Qué aspectos de los espacios, equipos o materiales deberían mejorarse?', req: true, ph: 'Escriba «No aplica» si corresponde...' },
-    { id: 'f4', txt: '4. ¿Qué recomendaciones harías para mejorar la experiencia de aprendizaje?', req: true, ph: 'Escriba aquí...' },
-    { id: 'f5', txt: '5. ¿Qué otras formaciones o temas le interesaría recibir?', req: false, ph: 'Temas de interés...' }
-  ];
+  /* Preguntas originales de SIREA. Se usan solo si el servidor no responde; normalmente la lista
+     vigente (la del constructor de encuestas) llega del servidor al abrir la página.
+     tipo: 'likert' (1–5 y N/A) · 'abierta' (texto) · 'opcion' (una opción de una lista). */
+  var PREGUNTAS = (function () {
+    var L = [
+      ['I. Dominio y desempeño del docente', 'El docente demuestra dominio de los contenidos que imparte.'],
+      ['I. Dominio y desempeño del docente', 'Explica los conceptos de manera clara y comprensible.'],
+      ['I. Dominio y desempeño del docente', 'Relaciona los contenidos con ejemplos o situaciones prácticas.'],
+      ['I. Dominio y desempeño del docente', 'Responde adecuadamente las preguntas de los estudiantes.'],
+      ['II. Planificación y desarrollo de la clase', 'Al inicio de la clase se presentan los objetivos esperados.'],
+      ['II. Planificación y desarrollo de la clase', 'Los contenidos se desarrollan de forma organizada.'],
+      ['II. Planificación y desarrollo de la clase', 'El tiempo de la clase se utiliza adecuadamente.'],
+      ['II. Planificación y desarrollo de la clase', 'Las actividades contribuyen al logro de los objetivos.'],
+      ['III. Metodología y participación', 'Utiliza estrategias que facilitan la comprensión.'],
+      ['III. Metodología y participación', 'Promueve la participación activa de los estudiantes.'],
+      ['III. Metodología y participación', 'Utiliza recursos didácticos apropiados.'],
+      ['III. Metodología y participación', 'Estimula el análisis y el pensamiento crítico.'],
+      ['IV. Clima del aula e interacción', 'El docente trata a los estudiantes con respeto.'],
+      ['IV. Clima del aula e interacción', 'Promueve un ambiente de confianza para opiniones.'],
+      ['IV. Clima del aula e interacción', 'Escucha y considera las inquietudes planteadas.'],
+      ['V. Aprendizaje y valoración general', 'La clase me permitió comprender mejor el tema.'],
+      ['V. Aprendizaje y valoración general', 'Las actividades me ayudaron a aplicar lo aprendido.'],
+      ['V. Aprendizaje y valoración general', 'En términos generales, la clase fue efectiva.'],
+      ['VI. Servicios, espacios y recursos', 'Las aulas o espacios son adecuados.'],
+      ['VI. Servicios, espacios y recursos', 'Los talleres/laboratorios cuentan con buenas condiciones.'],
+      ['VI. Servicios, espacios y recursos', 'Los equipos requeridos estuvieron disponibles.'],
+      ['VI. Servicios, espacios y recursos', 'Los equipos o máquinas funcionaron adecuadamente.'],
+      ['VI. Servicios, espacios y recursos', 'Insumos y materiales suficientes para prácticas.'],
+      ['VI. Servicios, espacios y recursos', 'Instrucciones de uso y seguridad adecuadas.'],
+      ['VI. Servicios, espacios y recursos', 'Disponibilidad de equipos de protección personal.'],
+      ['VI. Servicios, espacios y recursos', 'Plataformas digitales o tecnología facilitaron aprendizaje.'],
+      ['VI. Servicios, espacios y recursos', 'Servicios de apoyo respondieron oportunamente.']
+    ];
+    var A = [
+      '¿Qué aspectos del desempeño del docente consideras más positivos?',
+      '¿Qué podría mejorar el docente en su forma de impartir la clase?',
+      '¿Qué aspectos de los espacios, equipos o materiales deberían mejorarse?',
+      '¿Qué recomendaciones harías para mejorar la experiencia de aprendizaje?',
+      '¿Qué otras formaciones o temas le interesaría recibir?'
+    ];
+    var d = L.map(function (q, i) { return { id: 'P' + (i + 1), sec: q[0], tipo: 'likert', txt: q[1], req: true, opciones: [] }; });
+    A.forEach(function (t, j) { d.push({ id: 'f' + (j + 1), sec: 'VII. Preguntas Abiertas', tipo: 'abierta', txt: t, req: j < 4, opciones: [] }); });
+    return d;
+  })();
 
   var OPCIONES = ['1', '2', '3', '4', '5', 'N/A'];
   var CLASES_ERROR = ['border-2', 'border-rose-500', 'bg-rose-50'];
@@ -241,40 +240,47 @@
   // El número se pone al mostrar la pregunta: el texto guardado puede venir con o sin "1. ".
   function sinNumero(t) { return String(t || '').replace(/^\s*\d+\.\s*/, ''); }
 
-  function renderLikert() {
-    var html = '', seccion = '';
+  function marcaObligatoria(q) {
+    return q.req ? ' <span class="text-rose-500 font-bold">*</span>' : ' <span class="text-slate-500 font-normal">(Opcional)</span>';
+  }
+
+  /* Dibuja todas las preguntas en orden, con un título por sección. La numeración se reinicia en cada
+     bloque de preguntas abiertas para conservar el formato original (1–27, luego 1–5). */
+  function renderPreguntas() {
+    var html = '', seccion = null, n = 0, tipoAnterior = null;
     var BASE = 'border border-slate-200 bg-slate-50';
     PREGUNTAS.forEach(function (q) {
       if (q.sec !== seccion) {
         seccion = q.sec;
         html += '<h3 class="text-xs font-bold text-blue-900 border-b-2 border-blue-200 pb-1 pt-3 uppercase tracking-wider">' + esc(seccion) + '</h3>';
       }
-      var id = 'P' + q.id;
-      html += '<fieldset id="q-' + id + '" data-campo="' + id + '" data-base="' + BASE + '" class="pregunta p-3 rounded-xl space-y-2 transition-colors ' + BASE + '">' +
-        '<legend class="sr-only">Pregunta ' + q.id + '</legend>' +
-        '<p class="text-xs font-medium text-slate-800 leading-snug">' + q.id + '. ' + esc(sinNumero(q.txt)) + ' <span class="text-rose-500 font-bold">*</span></p>' +
-        '<div class="grid grid-cols-6 gap-1 pt-1">';
-      OPCIONES.forEach(function (op) {
-        html += '<label class="likert-btn flex-1 cursor-pointer"><input type="radio" name="' + id + '" value="' + op + '" class="sr-only">' +
-          '<span class="flex items-center justify-center py-2 px-1 text-xs font-semibold rounded-lg border border-slate-300 bg-white text-slate-700 active:bg-blue-100 transition-all select-none">' +
-          op + '</span></label>';
+      if (q.tipo === 'abierta' && tipoAnterior !== 'abierta' && tipoAnterior !== null && q.sec !== (PREGUNTAS[PREGUNTAS.indexOf(q) - 1] || {}).sec) n = 0;
+      tipoAnterior = q.tipo;
+      n++;
+      var id = q.id, titulo = n + '. ' + esc(sinNumero(q.txt));
+      if (q.tipo === 'abierta') {
+        var baseA = 'border border-transparent';
+        html += '<div id="q-' + id + '" data-campo="' + id + '" data-tipo="abierta" data-base="' + baseA + '" class="' + (q.req ? 'pregunta ' : '') + 'p-2.5 rounded-xl transition-colors ' + baseA + '">' +
+          '<label for="' + id + '" class="block text-xs font-semibold text-slate-700 mb-1">' + titulo + marcaObligatoria(q) + '</label>' +
+          '<textarea id="' + id + '" rows="2" maxlength="2000" placeholder="Escriba aquí..." ' +
+          'class="w-full p-2 bg-slate-50 border border-slate-300 rounded-lg text-xs focus:ring-2 focus:ring-blue-500 focus:bg-white focus:outline-none"></textarea>' +
+          (q.req ? '<p class="msg-error hidden mt-1 text-[11px] font-semibold text-rose-600">Esta pregunta es obligatoria.</p>' : '') +
+          '</div>';
+        return;
+      }
+      var opciones = q.tipo === 'likert' ? OPCIONES : (q.opciones || []);
+      html += '<fieldset id="q-' + id + '" data-campo="' + id + '" data-tipo="' + q.tipo + '" data-base="' + BASE + '" class="' + (q.req ? 'pregunta ' : '') + 'p-3 rounded-xl space-y-2 transition-colors ' + BASE + '">' +
+        '<legend class="sr-only">Pregunta ' + n + '</legend>' +
+        '<p class="text-xs font-medium text-slate-800 leading-snug">' + titulo + marcaObligatoria(q) + '</p>' +
+        '<div class="' + (q.tipo === 'likert' ? 'grid grid-cols-6 gap-1' : 'grid grid-cols-1 sm:grid-cols-2 gap-1.5') + ' pt-1">';
+      opciones.forEach(function (op) {
+        html += '<label class="likert-btn flex-1 cursor-pointer"><input type="radio" name="' + id + '" value="' + esc(op) + '" class="sr-only">' +
+          '<span class="flex items-center justify-center py-2 px-2 text-xs font-semibold rounded-lg border border-slate-300 bg-white text-slate-700 active:bg-blue-100 transition-all select-none text-center">' +
+          esc(op) + '</span></label>';
       });
       html += '</div><p class="msg-error hidden text-[11px] font-semibold text-rose-600">Seleccione una opción.</p></fieldset>';
     });
-    $('likert').innerHTML = html;
-  }
-
-  function renderAbiertas() {
-    $('abiertas').innerHTML = ABIERTAS.map(function (q, i) {
-      var base = q.req ? 'border border-transparent' : 'border-t border-dashed border-slate-200';
-      return '<div id="q-' + q.id + '" data-campo="' + q.id + '" data-base="' + base + '" class="' + (q.req ? 'pregunta ' : '') + 'p-2.5 rounded-xl transition-colors ' + base + '">' +
-        '<label for="' + q.id + '" class="block text-xs font-semibold ' + (q.req ? 'text-slate-700' : 'text-blue-900') + ' mb-1">' + (i + 1) + '. ' + esc(sinNumero(q.txt)) +
-        (q.req ? ' <span class="text-rose-500 font-bold">*</span>' : ' <span class="text-slate-500 font-normal">(Opcional)</span>') + '</label>' +
-        '<textarea id="' + q.id + '" rows="2" maxlength="2000" placeholder="' + esc(q.ph) + '" ' +
-        'class="w-full p-2 bg-slate-50 border border-slate-300 rounded-lg text-xs focus:ring-2 focus:ring-blue-500 focus:bg-white focus:outline-none"></textarea>' +
-        (q.req ? '<p class="msg-error hidden mt-1 text-[11px] font-semibold text-rose-600">Esta pregunta es obligatoria.</p>' : '') +
-        '</div>';
-    }).join('');
+    $('preguntas').innerHTML = html;
   }
 
   /* ---------- Preguntas editadas por la administración ----------
@@ -302,18 +308,20 @@
   }
 
   function aplicarPreguntas(p) {
-    var valida = p && p.likert && p.likert.length === PREGUNTAS.length && p.abiertas && p.abiertas.length === ABIERTAS.length;
+    var valida = Array.isArray(p) && p.length > 0 && p.every(function (q) {
+      return q && /^[A-Za-z]+\d+$/.test(q.id) && /^(likert|abierta|opcion)$/.test(q.tipo) && q.txt;
+    });
     if (valida) {
-      PREGUNTAS = p.likert.map(function (q, i) { return { id: i + 1, sec: q.sec, txt: q.txt }; });
-      ABIERTAS = ABIERTAS.map(function (q, i) { return { id: q.id, txt: p.abiertas[i].txt, req: q.req, ph: q.ph }; });
+      PREGUNTAS = p.map(function (q) {
+        return { id: q.id, sec: q.sec || '', tipo: q.tipo, txt: q.txt, req: !!q.req, opciones: q.opciones || [] };
+      });
     }
-    renderLikert();
-    renderAbiertas();
+    renderPreguntas();
     document.body.setAttribute('data-preguntas', valida ? 'servidor' : 'originales');
     $('btn-enviar').disabled = false;
   }
 
-  $('likert').innerHTML = '<p class="text-center text-xs text-slate-500 py-6"><i class="fa-solid fa-spinner fa-spin"></i> Cargando preguntas…</p>';
+  $('preguntas').innerHTML = '<p class="text-center text-xs text-slate-500 py-6"><i class="fa-solid fa-spinner fa-spin"></i> Cargando preguntas…</p>';
   $('btn-enviar').disabled = true;
   Promise.race([
     pedirPreguntas(),
@@ -321,16 +329,24 @@
   ]).catch(function () { return null; }).then(aplicarPreguntas);
 
   /* ---------- Validación ---------- */
+  function tipoDe(campo) {
+    for (var i = 0; i < PREGUNTAS.length; i++) if (PREGUNTAS[i].id === campo) return PREGUNTAS[i].tipo;
+    return null;
+  }
+  function valorDe(campo) {
+    if (tipoDe(campo) === 'abierta') return $(campo).value.trim();
+    var marcada = form.querySelector('input[name="' + campo + '"]:checked');
+    return marcada ? marcada.value : '';
+  }
   function respondida(campo) {
     if (campo === 'edad') return !!$('edad').value;
-    if (/^f\d$/.test(campo)) return $(campo).value.trim() !== '';
-    return !!form.querySelector('input[name="' + campo + '"]:checked');
+    if (campo === 'genero') return !!form.querySelector('input[name="genero"]:checked');
+    return valorDe(campo) !== '';
   }
 
   function camposObligatorios() {
     var lista = ['genero', 'edad'];
-    PREGUNTAS.forEach(function (q) { lista.push('P' + q.id); });
-    ABIERTAS.forEach(function (q) { if (q.req) lista.push(q.id); });
+    PREGUNTAS.forEach(function (q) { if (q.req) lista.push(q.id); });
     return lista;
   }
 
@@ -375,16 +391,13 @@
 
   /* ---------- Envío ---------- */
   function construirPayload() {
-    var likert = {};
-    PREGUNTAS.forEach(function (q) { likert['P' + q.id] = form.querySelector('input[name="P' + q.id + '"]:checked').value; });
-    var abiertas = {};
-    ABIERTAS.forEach(function (q) { abiertas[q.id] = $(q.id).value.trim(); });
+    var respuestas = {};
+    PREGUNTAS.forEach(function (q) { respuestas[q.id] = valorDe(q.id); });
     return {
       ctx: { u: CTX.u || '', a: CTX.a || '', c: CTX.c || '', d: CTX.d || '', s: CTX.s || '' },
       genero: form.querySelector('input[name="genero"]:checked').value,
       edad: $('edad').value,
-      likert: likert,
-      abiertas: abiertas
+      respuestas: respuestas
     };
   }
 

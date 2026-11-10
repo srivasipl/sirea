@@ -41,7 +41,7 @@
         <h2 class="text-xs font-bold text-blue-950 uppercase tracking-wider border-b border-slate-200 pb-1.5 flex items-center gap-1.5">
           <i class="fa-solid fa-filter text-blue-600"></i> Filtros
         </h2>
-        <div class="grid gap-3 sm:grid-cols-3">
+        <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <div>
             <label for="f-unidad" class="block text-xs font-semibold text-slate-700 mb-1">Unidad</label>
             <select id="f-unidad" class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs"></select>
@@ -49,6 +49,10 @@
           <div>
             <label for="f-area" class="block text-xs font-semibold text-slate-700 mb-1">Área</label>
             <select id="f-area" class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs"></select>
+          </div>
+          <div>
+            <label for="f-docente" class="block text-xs font-semibold text-slate-700 mb-1">Docente</label>
+            <select id="f-docente" class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs"></select>
           </div>
           <div>
             <label for="filtro" class="block text-xs font-semibold text-slate-700 mb-1">Curso</label>
@@ -63,28 +67,28 @@
         </div>
       </div>
 
-      <!-- Solo administración: editor de preguntas -->
+      <!-- Solo administración: constructor de la encuesta -->
       <div id="editor-wrap" class="hidden bg-white rounded-2xl border border-slate-200 p-4 shadow-sm">
         <div class="flex flex-wrap items-center justify-between gap-2">
           <div>
             <h2 class="text-sm font-bold text-slate-900"><i class="fa-solid fa-pen-to-square text-blue-600"></i> Preguntas de la encuesta</h2>
-            <p id="editor-estado" class="text-[11px] text-slate-500">Se usan las preguntas originales.</p>
+            <p id="editor-estado" class="text-[11px] text-slate-500"></p>
           </div>
           <button id="btn-editar" type="button" class="rounded-lg border border-blue-600 bg-white px-3 py-2 text-xs font-semibold text-blue-700 hover:bg-blue-50">
             <i class="fa-solid fa-pen"></i> Editar preguntas
           </button>
         </div>
-        <div id="editor" class="hidden mt-4 space-y-4">
-          <p class="bg-amber-50 border-l-4 border-amber-500 p-3 rounded-r-xl text-[11px] text-amber-900">
-            <b>Importante:</b> son siempre 27 afirmaciones y 5 preguntas abiertas, porque cada una tiene su columna en la hoja (P1–P27, f1–f5).
-            Si cambia el <b>sentido</b> de una pregunta durante un período de evaluación, en la misma columna quedarán respuestas a preguntas distintas.
-            Haga los cambios <b>antes</b> de iniciar el período. Los cambios se ven en la encuesta en cuanto se guardan.
-          </p>
+        <div id="editor" class="hidden mt-4 space-y-3">
+          <div class="bg-amber-50 border-l-4 border-amber-500 p-3 rounded-r-xl text-[11px] text-amber-900 space-y-1">
+            <p><b>Cómo funciona:</b> cada pregunta tiene un código (P = escala 1–5, f = abierta, O = opción única) que es su columna en la hoja.</p>
+            <p>• Una pregunta <b>nueva</b> crea una columna nueva. • Si <b>elimina</b> una pregunta, deja de mostrarse pero sus respuestas anteriores se conservan en la hoja.</p>
+            <p>• El <b>tipo</b> de una pregunta ya guardada no se puede cambiar: elimínela y cree otra. • Haga los cambios <b>antes</b> de iniciar un período de evaluación.</p>
+          </div>
           <datalist id="secciones"></datalist>
-          <div id="editor-likert" class="space-y-2"></div>
-          <h3 class="text-xs font-bold text-slate-900 uppercase tracking-wider border-t border-slate-200 pt-3">VII. Preguntas abiertas</h3>
-          <p class="text-[11px] text-slate-500 -mt-2">Las preguntas 1 a 4 son obligatorias; la 5 es opcional.</p>
-          <div id="editor-abiertas" class="space-y-2"></div>
+          <div id="editor-lista" class="space-y-2"></div>
+          <button id="btn-anadir" type="button" class="w-full rounded-lg border-2 border-dashed border-blue-300 bg-blue-50 px-4 py-2.5 text-xs font-semibold text-blue-700 hover:bg-blue-100">
+            <i class="fa-solid fa-plus"></i> Añadir pregunta
+          </button>
           <p id="editor-mensaje" role="alert" class="hidden rounded-lg p-3 text-xs"></p>
           <div class="flex flex-wrap gap-2">
             <button id="btn-guardar-preguntas" type="button" class="rounded-lg bg-emerald-600 hover:bg-emerald-700 px-4 py-2 text-xs font-semibold text-white disabled:opacity-60">
@@ -142,7 +146,7 @@
         </div>
 
         <div class="bg-white rounded-2xl border border-slate-200 p-4 sm:p-5 shadow-sm">
-          <h2 class="text-sm font-bold text-slate-900 mb-3">Promedio por afirmación</h2>
+          <h2 class="text-sm font-bold text-slate-900 mb-3">Resultados por pregunta</h2>
           <div id="preguntas" class="space-y-4"></div>
         </div>
 
@@ -173,56 +177,12 @@
   var CTX_INYECTADO = '__SIREA_CTX__';
   if (typeof CTX_INYECTADO !== 'object') CTX_INYECTADO = null;
 
-  /* Preguntas originales. Si la administración las editó, el servidor envía las nuevas
-     junto con los resultados y reemplazan a estas (aplicarPreguntas). */
-  var PREGUNTAS_BASE = [
-    ['I. Dominio y desempeño del docente', 'El docente demuestra dominio de los contenidos que imparte.'],
-    ['I. Dominio y desempeño del docente', 'Explica los conceptos de manera clara y comprensible.'],
-    ['I. Dominio y desempeño del docente', 'Relaciona los contenidos con ejemplos o situaciones prácticas.'],
-    ['I. Dominio y desempeño del docente', 'Responde adecuadamente las preguntas de los estudiantes.'],
-    ['II. Planificación y desarrollo de la clase', 'Al inicio de la clase se presentan los objetivos esperados.'],
-    ['II. Planificación y desarrollo de la clase', 'Los contenidos se desarrollan de forma organizada.'],
-    ['II. Planificación y desarrollo de la clase', 'El tiempo de la clase se utiliza adecuadamente.'],
-    ['II. Planificación y desarrollo de la clase', 'Las actividades contribuyen al logro de los objetivos.'],
-    ['III. Metodología y participación', 'Utiliza estrategias que facilitan la comprensión.'],
-    ['III. Metodología y participación', 'Promueve la participación activa de los estudiantes.'],
-    ['III. Metodología y participación', 'Utiliza recursos didácticos apropiados.'],
-    ['III. Metodología y participación', 'Estimula el análisis y el pensamiento crítico.'],
-    ['IV. Clima del aula e interacción', 'El docente trata a los estudiantes con respeto.'],
-    ['IV. Clima del aula e interacción', 'Promueve un ambiente de confianza para opiniones.'],
-    ['IV. Clima del aula e interacción', 'Escucha y considera las inquietudes planteadas.'],
-    ['V. Aprendizaje y valoración general', 'La clase me permitió comprender mejor el tema.'],
-    ['V. Aprendizaje y valoración general', 'Las actividades me ayudaron a aplicar lo aprendido.'],
-    ['V. Aprendizaje y valoración general', 'En términos generales, la clase fue efectiva.'],
-    ['VI. Servicios, espacios y recursos', 'Las aulas o espacios son adecuados.'],
-    ['VI. Servicios, espacios y recursos', 'Los talleres/laboratorios cuentan con buenas condiciones.'],
-    ['VI. Servicios, espacios y recursos', 'Los equipos requeridos estuvieron disponibles.'],
-    ['VI. Servicios, espacios y recursos', 'Los equipos o máquinas funcionaron adecuadamente.'],
-    ['VI. Servicios, espacios y recursos', 'Insumos y materiales suficientes para prácticas.'],
-    ['VI. Servicios, espacios y recursos', 'Instrucciones de uso y seguridad adecuadas.'],
-    ['VI. Servicios, espacios y recursos', 'Disponibilidad de equipos de protección personal.'],
-    ['VI. Servicios, espacios y recursos', 'Plataformas digitales o tecnología facilitaron aprendizaje.'],
-    ['VI. Servicios, espacios y recursos', 'Servicios de apoyo respondieron oportunamente.']
-  ];
-  var ABIERTAS_BASE = [
-    '¿Qué aspectos del desempeño del docente consideras más positivos?',
-    '¿Qué podría mejorar el docente en su forma de impartir la clase?',
-    '¿Qué aspectos de los espacios, equipos o materiales deberían mejorarse?',
-    '¿Qué recomendaciones harías para mejorar la experiencia de aprendizaje?',
-    '¿Qué otras formaciones o temas le interesaría recibir?'
-  ];
-  var PREGUNTAS = PREGUNTAS_BASE.slice();
-  var ABIERTAS = ABIERTAS_BASE.slice();
-  var preguntasEditadas = null;   // lo que hay guardado en el servidor (null = originales)
-  var claveActual = '';
+  /* URL /exec de Apps Script, para cuando esta página se publica fuera de Apps Script (GitHub Pages). */
+  var API_URL_DEFAULT = 'https://script.google.com/macros/s/AKfycbwq9M8QajLafPUY7DdI_Kj53-jRDCPsLEw-Qzqi1nGCiWGhM2sv2mmpaIlgqKVbFWQt/exec';
 
-  function sinNumero(t) { return String(t || '').replace(/^\s*\d+\.\s*/, ''); }
-  function aplicarPreguntas(p) {
-    var valida = p && p.likert && p.likert.length === PREGUNTAS_BASE.length && p.abiertas && p.abiertas.length === ABIERTAS_BASE.length;
-    preguntasEditadas = valida ? p : null;
-    PREGUNTAS = valida ? p.likert.map(function (q) { return [q.sec, sinNumero(q.txt)]; }) : PREGUNTAS_BASE.slice();
-    ABIERTAS = valida ? p.abiertas.map(function (q) { return sinNumero(q.txt); }) : ABIERTAS_BASE.slice();
-  }
+  var TIPOS = { likert: 'Escala 1–5 (Likert)', abierta: 'Pregunta abierta', opcion: 'Opción única' };
+  var PREGUNTAS = [];   // preguntas vigentes (llegan del servidor con los resultados)
+  var claveActual = '';
 
   var $ = function (id) { return document.getElementById(id); };
   function esc(s) {
@@ -230,9 +190,7 @@
       return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
     });
   }
-
-  /* URL /exec de Apps Script, para cuando esta página se publica fuera de Apps Script (GitHub Pages). */
-  var API_URL_DEFAULT = 'https://script.google.com/macros/s/AKfycbwq9M8QajLafPUY7DdI_Kj53-jRDCPsLEw-Qzqi1nGCiWGhM2sv2mmpaIlgqKVbFWQt/exec';
+  function sinNumero(t) { return String(t || '').replace(/^\s*\d+\.\s*/, ''); }
 
   /* Llamada al servidor:
      1) google.script.run cuando la página la sirve Apps Script;
@@ -277,22 +235,32 @@
   function claveDe(u) {
     return u.searchParams.get('k') || new URLSearchParams(u.hash.replace(/^#/, '')).get('k') || '';
   }
-
-  /* Acepta la clave sola o el enlace privado completo. */
   function extraerClave(v) {
     v = String(v || '').trim();
     try { var k = claveDe(new URL(v)); if (k) return k; } catch (e) { /* no es URL */ }
     return v;
   }
-
   function leerClaveInicial() {
     if (CTX_INYECTADO && CTX_INYECTADO.k) return CTX_INYECTADO.k;
     return claveDe(new URL(location.href));
   }
 
+  /* ---------- Preguntas ---------- */
+  function aplicarPreguntas(lista) {
+    PREGUNTAS = (lista || []).filter(function (q) { return q && q.activa !== false; }).map(function (q) {
+      return { id: q.id, sec: q.sec || '', tipo: q.tipo, txt: sinNumero(q.txt), req: !!q.req, opciones: q.opciones || [] };
+    });
+  }
+  /* Numeración como en la encuesta: preguntas cerradas 1, 2, 3…; abiertas aparte 1, 2, 3… */
+  function numeros() {
+    var n = {}, cerradas = 0, abiertas = 0;
+    PREGUNTAS.forEach(function (q) { n[q.id] = q.tipo === 'abierta' ? ++abiertas : ++cerradas; });
+    return n;
+  }
+
   /* ---------- Cálculos ---------- */
   function promedio(vals) {
-    var n = vals.filter(function (v) { return typeof v === 'number'; });
+    var n = vals.filter(function (v) { return typeof v === 'number' && !isNaN(v); });
     return n.length ? n.reduce(function (a, b) { return a + b; }, 0) / n.length : null;
   }
   function fmt(x) { return x == null ? '—' : x.toFixed(2); }
@@ -307,6 +275,13 @@
     for (var i = a.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)); var t = a[i]; a[i] = a[j]; a[j] = t; }
     return a;
   }
+  function likertsDe(filas) {
+    var v = [];
+    filas.forEach(function (f) {
+      PREGUNTAS.forEach(function (q) { if (q.tipo === 'likert') v.push(f.r ? f.r[q.id] : undefined); });
+    });
+    return v;
+  }
 
   /* ---------- Render ---------- */
   function pintarFicha(curso, todos) {
@@ -316,54 +291,65 @@
     $('r-unidad').textContent = !todos && curso && curso.u ? curso.u : '';
   }
 
-  function pintarBarras(id, conteos, total) {
-    var claves = Object.keys(conteos).sort();
-    $(id).innerHTML = claves.length ? claves.map(function (k) {
-      var pct = total ? Math.round(conteos[k] * 100 / total) : 0;
-      return '<div><div class="flex justify-between text-xs"><span>' + esc(k) + '</span><span class="font-semibold">' + conteos[k] + ' (' + pct + '%)</span></div>' +
+  function barras(conteos, total, orden) {
+    var claves = orden || Object.keys(conteos).sort();
+    return claves.length ? claves.map(function (k) {
+      var n = conteos[k] || 0;
+      var pct = total ? Math.round(n * 100 / total) : 0;
+      return '<div><div class="flex justify-between text-xs gap-2"><span>' + esc(k) + '</span><span class="shrink-0 font-semibold">' + n + ' (' + pct + '%)</span></div>' +
         '<div class="h-2 rounded bg-slate-100"><div class="h-2 rounded bg-blue-500" style="width:' + pct + '%"></div></div></div>';
     }).join('') : '<p class="text-xs text-slate-400">Sin datos.</p>';
   }
 
   function pintarDetalle(filas, generos, edades) {
-    var todas = [];
-    filas.forEach(function (f) { todas = todas.concat(f.p); });
     $('k-total').textContent = filas.length;
-    $('k-promedio').textContent = fmt(promedio(todas));
+    $('k-promedio').textContent = fmt(promedio(likertsDe(filas)));
+    var num = numeros();
 
-    var html = '', sec = '';
-    PREGUNTAS.forEach(function (q, i) {
-      if (q[0] !== sec) {
-        if (sec) html += '</div>';
-        sec = q[0];
-        var idx = [];
-        PREGUNTAS.forEach(function (x, j) { if (x[0] === sec) idx.push(j); });
+    var html = '', sec = null;
+    PREGUNTAS.forEach(function (q) {
+      if (q.tipo === 'abierta') return; // las abiertas van en «Comentarios»
+      if (q.sec !== sec) {
+        if (sec !== null) html += '</div>';
+        sec = q.sec;
+        var ids = PREGUNTAS.filter(function (x) { return x.sec === sec && x.tipo === 'likert'; }).map(function (x) { return x.id; });
         var vals = [];
-        filas.forEach(function (f) { idx.forEach(function (j) { vals.push(f.p[j]); }); });
+        filas.forEach(function (f) { ids.forEach(function (id) { vals.push(f.r[id]); }); });
         html += '<div class="space-y-2"><div class="flex justify-between border-b-2 border-blue-200 pb-1"><h3 class="text-xs font-bold uppercase tracking-wider text-blue-900">' +
-          esc(sec) + '</h3><span class="text-xs font-bold text-blue-900">' + fmt(promedio(vals)) + '</span></div>';
+          esc(sec) + '</h3><span class="text-xs font-bold text-blue-900">' + (ids.length ? fmt(promedio(vals)) : '') + '</span></div>';
       }
-      var v = filas.map(function (f) { return f.p[i]; });
-      var p = promedio(v);
-      var na = v.filter(function (x) { return x === 'N/A'; }).length;
-      html += '<div class="text-xs" data-pregunta="P' + (i + 1) + '"><div class="flex justify-between gap-2"><span>' + (i + 1) + '. ' + esc(q[1]) + '</span>' +
-        '<span class="shrink-0 font-semibold">' + fmt(p) + (na ? ' <span class="font-normal text-slate-400">· N/A ' + na + '</span>' : '') + '</span></div>' +
-        '<div class="mt-1 h-2 rounded bg-slate-100"><div class="h-2 rounded ' + colorBarra(p) + '" style="width:' + (p ? p * 20 : 0) + '%"></div></div></div>';
+      var titulo = num[q.id] + '. ' + esc(q.txt);
+      var respuestas = filas.map(function (f) { return f.r[q.id]; }).filter(function (v) { return v !== '' && v !== undefined && v !== null; });
+      if (q.tipo === 'likert') {
+        var p = promedio(respuestas);
+        var na = respuestas.filter(function (x) { return x === 'N/A'; }).length;
+        html += '<div class="text-xs" data-pregunta="' + esc(q.id) + '"><div class="flex justify-between gap-2"><span>' + titulo + '</span>' +
+          '<span class="shrink-0 font-semibold">' + fmt(p) + (na ? ' <span class="font-normal text-slate-400">· N/A ' + na + '</span>' : '') + '</span></div>' +
+          '<div class="mt-1 h-2 rounded bg-slate-100"><div class="h-2 rounded ' + colorBarra(p) + '" style="width:' + (p ? p * 20 : 0) + '%"></div></div></div>';
+      } else {
+        var c = {};
+        respuestas.forEach(function (v) { c[v] = (c[v] || 0) + 1; });
+        var orden = (q.opciones || []).concat(Object.keys(c).filter(function (k) { return q.opciones.indexOf(k) === -1; }));
+        html += '<div class="text-xs space-y-1.5" data-pregunta="' + esc(q.id) + '"><p>' + titulo +
+          ' <span class="text-slate-400">(' + respuestas.length + ' respuestas)</span></p>' + barras(c, respuestas.length, orden) + '</div>';
+      }
     });
-    if (sec) html += '</div>';
-    $('preguntas').innerHTML = html;
+    if (sec !== null) html += '</div>';
+    $('preguntas').innerHTML = html || '<p class="text-xs text-slate-400">Esta encuesta no tiene preguntas de escala ni de opción.</p>';
 
-    pintarBarras('d-genero', generos, filas.length);
-    pintarBarras('d-edad', edades, filas.length);
+    $('d-genero').innerHTML = barras(generos, filas.length);
+    $('d-edad').innerHTML = barras(edades, filas.length);
 
     var orden = mezclar(filas);
-    $('comentarios').innerHTML = ABIERTAS.map(function (titulo, j) {
-      var textos = orden.map(function (f) { return f.f[j]; }).filter(function (t) { return t && t.trim(); });
-      return '<div><h3 class="text-xs font-bold text-slate-800 mb-1.5">' + (j + 1) + '. ' + esc(titulo) + ' <span class="font-normal text-slate-400">(' + textos.length + ')</span></h3>' +
+    var abiertas = PREGUNTAS.filter(function (q) { return q.tipo === 'abierta'; });
+    $('comentarios').innerHTML = abiertas.length ? abiertas.map(function (q) {
+      var textos = orden.map(function (f) { return f.r[q.id]; }).filter(function (t) { return t && String(t).trim(); });
+      return '<div data-pregunta="' + esc(q.id) + '"><h3 class="text-xs font-bold text-slate-800 mb-1.5">' + num[q.id] + '. ' + esc(q.txt) +
+        ' <span class="font-normal text-slate-400">(' + textos.length + ')</span></h3>' +
         (textos.length ? '<ul class="space-y-1.5">' + textos.map(function (t) {
           return '<li class="rounded-lg bg-slate-50 border border-slate-200 p-2 text-xs whitespace-pre-line break-words">' + esc(t) + '</li>';
         }).join('') + '</ul>' : '<p class="text-xs text-slate-400">Sin comentarios.</p>') + '</div>';
-    }).join('');
+    }).join('') : '<p class="text-xs text-slate-400">Esta encuesta no tiene preguntas abiertas.</p>';
   }
 
   /* ---------- Vistas ---------- */
@@ -386,11 +372,6 @@
   }
 
   /* ---------- CSV (administración) ---------- */
-  var CABECERAS_CSV = ['Fecha', 'Unidad', 'Área', 'Curso', 'Docente', 'Género', 'Rango de Edad', 'Promedio General'];
-  for (var ci = 1; ci <= 27; ci++) CABECERAS_CSV.push('P' + ci);
-  for (var cj = 1; cj <= 5; cj++) CABECERAS_CSV.push('f' + cj);
-  CABECERAS_CSV.push('ID Encuesta');
-
   /* Campo CSV entre comillas. Los textos que empiezan por = + - @ se prefijan con ' para que
      Excel no los ejecute como fórmulas. */
   function campoCsv(v) {
@@ -404,11 +385,16 @@
     var p = function (n) { return (n < 10 ? '0' : '') + n; };
     return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()) + ' ' + p(d.getHours()) + ':' + p(d.getMinutes());
   }
-  function generarCsv(filas) {
-    var lineas = [CABECERAS_CSV.map(campoCsv).join(',')];
+  var FIJAS = { 'Fecha': 'fecha', 'Unidad': 'u', 'Área': 'a', 'Curso': 'c', 'Docente': 'd', 'Género': 'genero',
+                'Rango de Edad': 'edad', 'Promedio General': 'promedio', 'ID Encuesta': 'id' };
+  /* Mismas columnas y en el mismo orden que la hoja (incluye preguntas eliminadas con respuestas). */
+  function generarCsv(filas, columnas) {
+    var lineas = [columnas.map(campoCsv).join(',')];
     filas.forEach(function (f) {
-      lineas.push([fechaLocal(f.fecha), f.u, f.a, f.c, f.d, f.genero, f.edad, f.promedio]
-        .concat(f.p, f.f, [f.id]).map(campoCsv).join(','));
+      lineas.push(columnas.map(function (h) {
+        if (FIJAS[h]) return campoCsv(h === 'Fecha' ? fechaLocal(f.fecha) : f[FIJAS[h]]);
+        return campoCsv(f.r && f.r.hasOwnProperty(h) ? f.r[h] : '');
+      }).join(','));
     });
     return '﻿' + lineas.join('\r\n'); // BOM: Excel reconoce tildes y ñ
   }
@@ -428,6 +414,7 @@
     $('subtitulo').textContent = 'Administración · todos los cursos';
     $('btn-hoja').classList.remove('hidden');
     var todas = r.filas;
+    var columnas = r.columnas || [];
     var grupos = {};
     function claveGrupo(f) { return f.id || ['sin-id', f.u, f.a, f.c, f.d].join('|'); }
     todas.forEach(function (f) {
@@ -439,11 +426,6 @@
       return (x.c + x.d).localeCompare(y.c + y.d, 'es');
     });
 
-    function unicos(campo) {
-      var vistos = {};
-      todas.forEach(function (f) { if (f[campo]) vistos[f[campo]] = true; });
-      return Object.keys(vistos).sort(function (a, b) { return a.localeCompare(b, 'es'); });
-    }
     function llenar(sel, valores, todos) {
       var actual = sel.value;
       sel.innerHTML = '<option value="">' + esc(todos) + '</option>' + valores.map(function (v) {
@@ -451,18 +433,25 @@
       }).join('');
       if (valores.some(function (v) { return v[0] === actual; })) sel.value = actual;
     }
-    llenar($('f-unidad'), unicos('u').map(function (v) { return [v, v]; }), 'Todas las unidades');
-    llenar($('f-area'), unicos('a').map(function (v) { return [v, v]; }), 'Todas las áreas');
-
-    function clavesVisibles() {
-      var u = $('f-unidad').value, a = $('f-area').value;
+    function filtro(campos) {
+      var u = $('f-unidad').value, a = $('f-area').value, d = $('f-docente').value;
       return claves.filter(function (k) {
         var c = grupos[k].curso;
-        return (!u || c.u === u) && (!a || c.a === a);
+        return (campos.indexOf('u') < 0 || !u || c.u === u) && (campos.indexOf('a') < 0 || !a || c.a === a) &&
+               (campos.indexOf('d') < 0 || !d || c.d === d);
       });
     }
-    function llenarCursos() {
-      var visibles = clavesVisibles();
+    function unicos(lista, campo) {
+      var vistos = {};
+      lista.forEach(function (k) { var v = grupos[k].curso[campo]; if (v) vistos[v] = true; });
+      return Object.keys(vistos).sort(function (x, y) { return x.localeCompare(y, 'es'); }).map(function (v) { return [v, v]; });
+    }
+    // Cada filtro muestra solo los valores compatibles con los otros filtros.
+    function llenarFiltros() {
+      llenar($('f-unidad'), unicos(filtro(['a', 'd']), 'u'), 'Todas las unidades');
+      llenar($('f-area'), unicos(filtro(['u', 'd']), 'a'), 'Todas las áreas');
+      llenar($('f-docente'), unicos(filtro(['u', 'a']), 'd'), 'Todos los docentes');
+      var visibles = filtro(['u', 'a', 'd']);
       var total = visibles.reduce(function (s, k) { return s + grupos[k].filas.length; }, 0);
       llenar($('filtro'), visibles.map(function (k) {
         var c = grupos[k].curso;
@@ -473,15 +462,14 @@
       var k = $('filtro').value;
       if (k) return grupos[k].filas;
       var out = [];
-      clavesVisibles().forEach(function (x) { out = out.concat(grupos[x].filas); });
+      filtro(['u', 'a', 'd']).forEach(function (x) { out = out.concat(grupos[x].filas); });
       return out;
     }
     function pintarTablaCursos() {
       var k = $('filtro').value;
-      $('tabla-cursos').innerHTML = clavesVisibles().map(function (x) {
-        var g = grupos[x], c = g.curso, vals = [];
-        g.filas.forEach(function (f) { vals = vals.concat(f.p); });
-        var p = promedio(vals);
+      $('tabla-cursos').innerHTML = filtro(['u', 'a', 'd']).map(function (x) {
+        var g = grupos[x], c = g.curso;
+        var p = promedio(likertsDe(g.filas));
         var color = p == null ? 'text-slate-400' : p >= 4 ? 'text-emerald-700' : p >= 3 ? 'text-amber-700' : 'text-rose-700';
         return '<tr data-curso="' + esc(x) + '" class="cursor-pointer border-b border-slate-100 hover:bg-blue-50' + (x === k ? ' bg-blue-50' : '') + '">' +
           '<td class="py-2 pr-2 font-semibold text-slate-900">' + esc(c.c || 'Sin curso') + '</td>' +
@@ -495,11 +483,12 @@
     function mostrar() {
       var k = $('filtro').value;
       var filas = filasActuales();
-      var u = $('f-unidad').value, a = $('f-area').value;
+      var u = $('f-unidad').value, a = $('f-area').value, d = $('f-docente').value;
       if (k) {
         pintarFicha(grupos[k].curso, false);
       } else {
         pintarFicha(null, true);
+        $('r-docente').textContent = d ? 'Docente: ' + d : '';
         $('r-area').textContent = a ? 'Área: ' + a : '';
         $('r-unidad').textContent = u || '';
       }
@@ -507,10 +496,11 @@
       pintarTablaCursos();
       pintarDetalle(filas, contar(filas, 'genero'), contar(filas, 'edad'));
     }
-    window.SIREA_csvActual = function () { return generarCsv(filasActuales()); }; // expuesto para pruebas
+    window.SIREA_csvActual = function () { return generarCsv(filasActuales(), columnas); }; // expuesto para pruebas
 
-    $('f-unidad').onchange = function () { llenarCursos(); mostrar(); };
-    $('f-area').onchange = function () { llenarCursos(); mostrar(); };
+    ['f-unidad', 'f-area', 'f-docente'].forEach(function (id) {
+      $(id).onchange = function () { llenarFiltros(); mostrar(); };
+    });
     $('filtro').onchange = mostrar;
     $('tabla-cursos').onclick = function (ev) {
       var tr = ev.target.closest('tr[data-curso]');
@@ -519,9 +509,9 @@
       mostrar();
       $('ficha').scrollIntoView({ behavior: 'smooth', block: 'start' });
     };
-    $('btn-csv').onclick = function () { descargarCsv(generarCsv(filasActuales())); };
+    $('btn-csv').onclick = function () { descargarCsv(generarCsv(filasActuales(), columnas)); };
 
-    llenarCursos();
+    llenarFiltros();
     $('filtro-wrap').classList.remove('hidden');
     $('cursos-wrap').classList.remove('hidden');
     prepararEditor(mostrar);
@@ -529,11 +519,14 @@
     $('vista').classList.remove('hidden');
   }
 
-  /* ---------- Editor de preguntas (solo administración) ---------- */
+  /* ---------- Constructor de la encuesta (solo administración) ---------- */
+  var borrador = [];
+
   function estadoEditor() {
-    $('editor-estado').textContent = preguntasEditadas
-      ? 'Preguntas editadas' + (preguntasEditadas.actualizado ? ' el ' + fechaLocal(preguntasEditadas.actualizado) : '') + '.'
-      : 'Se usan las preguntas originales.';
+    var c = { likert: 0, abierta: 0, opcion: 0 };
+    PREGUNTAS.forEach(function (q) { c[q.tipo] = (c[q.tipo] || 0) + 1; });
+    $('editor-estado').textContent = PREGUNTAS.length + ' preguntas: ' + c.likert + ' de escala, ' + c.abierta +
+      ' abiertas, ' + c.opcion + ' de opción única.';
   }
   function mensajeEditor(texto, tipo) {
     var m = $('editor-mensaje');
@@ -541,37 +534,67 @@
     m.className = 'rounded-lg p-3 text-xs ' + (tipo === 'error' ? 'bg-rose-50 text-rose-800' : 'bg-emerald-50 text-emerald-800');
     m.classList.toggle('hidden', !texto);
   }
-  function llenarEditor() {
-    var secciones = {};
-    PREGUNTAS.forEach(function (q) { secciones[q[0]] = true; });
-    PREGUNTAS_BASE.forEach(function (q) { secciones[q[0]] = true; });
-    $('secciones').innerHTML = Object.keys(secciones).map(function (s) { return '<option value="' + esc(s) + '">'; }).join('');
-    var campo = 'w-full rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500';
-    $('editor-likert').innerHTML = PREGUNTAS.map(function (q, i) {
-      var n = i + 1;
-      return '<div class="flex gap-2 items-start rounded-lg bg-slate-50 border border-slate-200 p-2">' +
-        '<span class="w-6 shrink-0 text-xs font-bold text-blue-900 pt-1.5">' + n + '.</span>' +
-        '<div class="flex-1 min-w-0 space-y-1">' +
-        '<input id="ed-sec-' + n + '" list="secciones" maxlength="80" aria-label="Sección de la afirmación ' + n + '" ' +
-        'class="w-full rounded-md border border-transparent bg-transparent px-1 py-0.5 text-[10px] font-bold uppercase tracking-wider text-blue-900 hover:border-slate-300 focus:border-slate-300 focus:bg-white focus:outline-none">' +
-        '<textarea id="ed-txt-' + n + '" rows="2" maxlength="220" aria-label="Texto de la afirmación ' + n + '" class="' + campo + ' resize-y"></textarea>' +
-        '</div></div>';
-    }).join('');
-    $('editor-abiertas').innerHTML = ABIERTAS.map(function (t, j) {
-      var n = j + 1;
-      return '<div class="flex gap-2 items-start">' +
-        '<span class="w-6 shrink-0 text-xs font-bold text-blue-900 pt-1.5">' + n + '.</span>' +
-        '<textarea id="ed-f' + n + '" rows="2" maxlength="220" aria-label="Pregunta abierta ' + n + '" class="' + campo + ' flex-1 resize-y"></textarea></div>';
-    }).join('');
-    // Los valores se asignan como texto (no como HTML).
-    PREGUNTAS.forEach(function (q, i) { $('ed-sec-' + (i + 1)).value = q[0]; $('ed-txt-' + (i + 1)).value = q[1]; });
-    ABIERTAS.forEach(function (t, j) { $('ed-f' + (j + 1)).value = t; });
+  function campo(extra) {
+    return 'w-full rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 ' + (extra || '');
   }
-  function leerEditor() {
-    return {
-      likert: PREGUNTAS.map(function (q, i) { return { sec: $('ed-sec-' + (i + 1)).value.trim(), txt: $('ed-txt-' + (i + 1)).value.trim() }; }),
-      abiertas: ABIERTAS.map(function (t, j) { return { txt: $('ed-f' + (j + 1)).value.trim() }; })
-    };
+  function pintarEditor() {
+    var secciones = {};
+    borrador.forEach(function (q) { if (q.sec) secciones[q.sec] = true; });
+    $('secciones').innerHTML = Object.keys(secciones).map(function (s) { return '<option value="' + esc(s) + '">'; }).join('');
+    var boton = 'rounded-md border border-slate-300 bg-white px-2 py-1 text-[11px] text-slate-600 hover:bg-slate-100 disabled:opacity-30';
+    $('editor-lista').innerHTML = borrador.map(function (q, i) {
+      var tipos = Object.keys(TIPOS).map(function (t) {
+        return '<option value="' + t + '"' + (q.tipo === t ? ' selected' : '') + '>' + TIPOS[t] + '</option>';
+      }).join('');
+      return '<div class="rounded-lg bg-slate-50 border border-slate-200 p-2.5 space-y-1.5" data-i="' + i + '">' +
+        '<div class="flex flex-wrap items-center gap-1.5">' +
+          '<span class="w-7 text-xs font-bold text-blue-900">' + (i + 1) + '.</span>' +
+          '<span class="rounded bg-white border border-slate-200 px-1.5 py-0.5 font-mono text-[10px] text-slate-500" title="Código / columna en la hoja">' + esc(q.id || 'nueva') + '</span>' +
+          '<select data-campo="tipo" aria-label="Tipo de la pregunta ' + (i + 1) + '" class="rounded-md border border-slate-300 bg-white px-1.5 py-1 text-[11px]"' +
+            (q.id ? ' disabled title="El tipo de una pregunta ya guardada no se puede cambiar"' : '') + '>' + tipos + '</select>' +
+          '<label class="flex items-center gap-1 text-[11px] text-slate-700"><input type="checkbox" data-campo="req"' + (q.req ? ' checked' : '') + '> Obligatoria</label>' +
+          '<span class="ml-auto flex gap-1">' +
+            '<button type="button" data-accion="subir" class="' + boton + '"' + (i === 0 ? ' disabled' : '') + ' aria-label="Subir"><i class="fa-solid fa-arrow-up"></i></button>' +
+            '<button type="button" data-accion="bajar" class="' + boton + '"' + (i === borrador.length - 1 ? ' disabled' : '') + ' aria-label="Bajar"><i class="fa-solid fa-arrow-down"></i></button>' +
+            '<button type="button" data-accion="eliminar" class="rounded-md border border-rose-200 bg-white px-2 py-1 text-[11px] text-rose-600 hover:bg-rose-50" aria-label="Eliminar"><i class="fa-solid fa-trash"></i></button>' +
+          '</span>' +
+        '</div>' +
+        '<input data-campo="sec" list="secciones" maxlength="80" placeholder="Sección (por ejemplo: I. Dominio y desempeño del docente)" aria-label="Sección de la pregunta ' + (i + 1) + '" ' +
+          'class="w-full rounded-md border border-transparent bg-transparent px-1 py-0.5 text-[10px] font-bold uppercase tracking-wider text-blue-900 hover:border-slate-300 focus:border-slate-300 focus:bg-white focus:outline-none">' +
+        '<textarea data-campo="txt" rows="2" maxlength="300" placeholder="Texto de la pregunta" aria-label="Texto de la pregunta ' + (i + 1) + '" class="' + campo('resize-y') + '"></textarea>' +
+        (q.tipo === 'opcion'
+          ? '<textarea data-campo="opciones" rows="3" placeholder="Una opción por línea (mínimo 2)" aria-label="Opciones de la pregunta ' + (i + 1) + '" class="' + campo('resize-y font-mono') + '"></textarea>'
+          : '') +
+      '</div>';
+    }).join('');
+    // Valores como texto (nunca como HTML).
+    [].forEach.call($('editor-lista').querySelectorAll('[data-i]'), function (div) {
+      var q = borrador[Number(div.getAttribute('data-i'))];
+      div.querySelector('[data-campo="sec"]').value = q.sec;
+      div.querySelector('[data-campo="txt"]').value = q.txt;
+      var o = div.querySelector('[data-campo="opciones"]');
+      if (o) o.value = (q.opciones || []).join('\n');
+    });
+  }
+  function abrirEditor() {
+    borrador = PREGUNTAS.map(function (q) {
+      return { id: q.id, sec: q.sec, tipo: q.tipo, txt: q.txt, req: q.req, opciones: (q.opciones || []).slice() };
+    });
+    pintarEditor();
+    mensajeEditor('');
+  }
+  function validarBorrador() {
+    for (var i = 0; i < borrador.length; i++) {
+      var q = borrador[i], n = i + 1;
+      if (!q.sec.trim()) return 'Escriba la sección de la pregunta ' + n + '.';
+      if (!q.txt.trim()) return 'Escriba el texto de la pregunta ' + n + '.';
+      if (q.tipo === 'opcion') {
+        var ops = q.opciones.map(function (o) { return o.trim(); }).filter(Boolean);
+        if (ops.length < 2) return 'La pregunta ' + n + ' necesita al menos 2 opciones (una por línea).';
+      }
+    }
+    if (!borrador.length) return 'La encuesta debe tener al menos una pregunta.';
+    return '';
   }
   function guardarEnServidor(preguntas, redibujar, exito) {
     $('btn-guardar-preguntas').disabled = true;
@@ -580,7 +603,7 @@
       .then(function (r) {
         aplicarPreguntas(r && r.preguntas);
         estadoEditor();
-        llenarEditor();
+        abrirEditor();
         redibujar();
         mensajeEditor(exito, 'ok');
       })
@@ -592,17 +615,49 @@
     estadoEditor();
     $('btn-editar').onclick = function () {
       var abierto = !$('editor').classList.contains('hidden');
-      if (!abierto) { llenarEditor(); mensajeEditor(''); }
+      if (!abierto) abrirEditor();
       $('editor').classList.toggle('hidden', abierto);
     };
     $('btn-cancelar-preguntas').onclick = function () { $('editor').classList.add('hidden'); mensajeEditor(''); };
+
+    // Cambios en los campos → borrador
+    var lista = $('editor-lista');
+    function alCambiar(ev) {
+      var div = ev.target.closest('[data-i]'), c = ev.target.getAttribute('data-campo');
+      if (!div || !c) return;
+      var q = borrador[Number(div.getAttribute('data-i'))];
+      if (c === 'req') q.req = ev.target.checked;
+      else if (c === 'opciones') q.opciones = ev.target.value.split('\n');
+      else if (c === 'tipo') { q.tipo = ev.target.value; pintarEditor(); }
+      else q[c] = ev.target.value;
+    }
+    lista.oninput = alCambiar;
+    lista.onchange = alCambiar;
+    lista.onclick = function (ev) {
+      var b = ev.target.closest('[data-accion]');
+      if (!b) return;
+      var i = Number(b.closest('[data-i]').getAttribute('data-i')), acc = b.getAttribute('data-accion');
+      if (acc === 'eliminar') borrador.splice(i, 1);
+      if (acc === 'subir' && i > 0) borrador.splice(i - 1, 0, borrador.splice(i, 1)[0]);
+      if (acc === 'bajar' && i < borrador.length - 1) borrador.splice(i + 1, 0, borrador.splice(i, 1)[0]);
+      pintarEditor();
+    };
+    $('btn-anadir').onclick = function () {
+      var ultima = borrador[borrador.length - 1];
+      borrador.push({ id: null, sec: ultima ? ultima.sec : '', tipo: 'likert', txt: '', req: true, opciones: [] });
+      pintarEditor();
+      var nuevas = lista.querySelectorAll('[data-campo="txt"]');
+      var t = nuevas[nuevas.length - 1];
+      if (t) { t.scrollIntoView({ behavior: 'smooth', block: 'center' }); try { t.focus({ preventScroll: true }); } catch (e) {} }
+    };
     $('btn-guardar-preguntas').onclick = function () {
-      var p = leerEditor();
-      var vacia = p.likert.findIndex(function (q) { return !q.sec || !q.txt; });
-      if (vacia >= 0) { mensajeEditor('Complete la sección y el texto de la afirmación ' + (vacia + 1) + '.', 'error'); return; }
-      var vaciaF = p.abiertas.findIndex(function (q) { return !q.txt; });
-      if (vaciaF >= 0) { mensajeEditor('Complete la pregunta abierta ' + (vaciaF + 1) + '.', 'error'); return; }
-      guardarEnServidor(p, redibujar, '✓ Preguntas guardadas. Los estudiantes las verán al abrir la encuesta.');
+      var error = validarBorrador();
+      if (error) { mensajeEditor(error, 'error'); return; }
+      var envio = borrador.map(function (q) {
+        return { id: q.id || undefined, sec: q.sec.trim(), tipo: q.tipo, txt: q.txt.trim(), req: !!q.req,
+                 opciones: q.tipo === 'opcion' ? q.opciones.map(function (o) { return o.trim(); }).filter(Boolean) : [] };
+      });
+      guardarEnServidor(envio, redibujar, '✓ Preguntas guardadas. Los estudiantes las verán al abrir la encuesta.');
     };
     // Confirmación en dos pasos (window.confirm puede estar bloqueado dentro de Google Sites).
     var btnR = $('btn-restaurar-preguntas'), textoR = btnR.innerHTML, esperaR = null;
@@ -616,7 +671,7 @@
       guardarEnServidor(null, redibujar, '✓ Se restauraron las preguntas originales.');
     };
   }
-  window.SIREA_leerEditor = function () { return leerEditor(); }; // expuesto para pruebas
+  window.SIREA_borrador = function () { return borrador; }; // expuesto para pruebas
 
   function cargar(clave) {
     mensaje('');
